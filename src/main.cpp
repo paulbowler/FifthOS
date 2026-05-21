@@ -1,17 +1,29 @@
 #include <Arduino.h>
 
 #include "SPIFFS.h"
-#include <TFT_eSPI.h>
 
 #include "config.h"
 #include "credentials.h"
 #include "dictionary.h"
-#include "display.h"
+#include "forth_runtime.h"
+#include "gfx_backend.h"
 #include "globals.h"
+#include "gui_boot.h"
+#include "gui_runtime.h"
 #include "http.h"
 #include "network.h"
 #include "util.h"
 #include "vm.h"
+
+namespace {
+
+constexpr uint16_t COLOR_BLACK = 0x0000;
+constexpr uint16_t COLOR_WHITE = 0xFFFF;
+constexpr uint16_t COLOR_RED = 0xF800;
+constexpr uint16_t COLOR_GREEN = 0x07E0;
+constexpr uint16_t COLOR_ORANGE = 0xFD20;
+
+}
 
 void printNetworkInfo()
 {
@@ -26,22 +38,33 @@ void printNetworkInfo()
     Serial.println(".local");
 }
 
-void showNetworkInfo(TFT_eSPI tft)
+static void drawBootStatus(const char* title, const String& detail, uint16_t titleColor, uint16_t detailColor)
 {
-    tft.fillScreen(TFT_BLACK);
-    tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-    tft.setCursor(0, 30);
-    tft.setFreeFont(&Orbitron_Light_24);
-    tft.println("IP");
-    tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    tft.println(WiFi.localIP());
-    tft.setCursor(0, 90);
-    tft.setFreeFont(&FreeSerif12pt7b);
-    tft.setTextColor(TFT_RED, TFT_BLACK);
-    tft.print("http://");
-    tft.print(deviceName);
-    tft.println(".local");
-    delay(5000);
+    gfx_clear(COLOR_BLACK);
+    gfx_set_text_scale(2);
+    gfx_text(12, 24, title, strlen(title), titleColor);
+
+    gfx_set_text_scale(2);
+    String body = detail;
+    if (body.length() == 0) {
+        body = "no detail";
+    }
+
+    int16_t y = 72;
+    int start = 0;
+    while (start < body.length() && y < gfx_height() - 24) {
+        int end = body.indexOf('\n', start);
+        if (end < 0) {
+            end = body.length();
+        }
+        String line = body.substring(start, end);
+        if (line.length() > 16) {
+            line = line.substring(0, 16);
+        }
+        gfx_text(12, y, line.c_str(), line.length(), detailColor);
+        y += 28;
+        start = end + 1;
+    }
 }
 
 static void returnFail(String msg)
@@ -57,14 +80,7 @@ static void handleInput()
     HTTPin = server.arg("cmd");
     HTTPout = "";
     Serial.println(HTTPin); // line cleaned up
-    len = HTTPin.length();
-    HTTPin.getBytes(cData, len);
-    data[0x66] = 0; // >IN
-    data[0x67] = len; // #TIB
-    data[0x68] = 0; // 'TIB
-    P = 0x180; // EVAL
-    WP = 0x184;
-    evaluate();
+    forth_eval_buffer(HTTPin.c_str(), HTTPin.length());
     server.setContentLength(HTTPout.length());
     server.send(200, "text/plain", HTTPout);
 }
@@ -80,17 +96,37 @@ void setup()
     cData = (uint8_t*)data;
 
     setupNetwork(monitorSpeed, ssid, pass, deviceName);
-
     initDictionary();
+    gui_runtime_init();
+    bool bootOk = true;
+    for (size_t i = 0; i < fifthos_gui_boot_phase_count; i++) {
+        drawBootStatus("FifthOS boot", fifthos_gui_boot_phases[i].name, COLOR_ORANGE, COLOR_WHITE);
+        HTTPout = "";
+        forth_eval_text(fifthos_gui_boot_phases[i].script);
+        if (HTTPout.indexOf('?') >= 0) {
+            drawBootStatus("GUI boot failed", String(fifthos_gui_boot_phases[i].name) + "\n" + HTTPout, COLOR_RED, COLOR_WHITE);
+            bootOk = false;
+            break;
+        }
+    }
+
+    if (bootOk && !gui_has_active_app()) {
+        drawBootStatus("GUI boot failed", "no active app", COLOR_RED, COLOR_WHITE);
+        bootOk = false;
+    }
+
+    if (bootOk) {
+        String detail = gui_has_active_app() ? "app built\nrender skipped" : "no active app";
+        Serial.println(detail);
+        gui_draw_active_app();
+    }
 
     setupHttp(handleInput);
     printNetworkInfo();
-
-    setupDisplay();
-    showNetworkInfo(tft);
 }
 
 void loop()
 {
     server.handleClient();
+    gui_runtime_tick();
 }

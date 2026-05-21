@@ -2,12 +2,12 @@
 
 #include <Arduino.h>
 
-#define pop top = stack[(unsigned char)S--]
-#define push                         \
+#define vmPop top = stack[(unsigned char)S--]
+#define vmPush                       \
     stack[(unsigned char)++S] = top; \
     top =
-#define popR rack[(unsigned char)R--]
-#define pushR rack[(unsigned char)++R]
+#define vmPopR rack[(unsigned char)R--]
+#define vmPushR rack[(unsigned char)++R]
 
 extern long rack[];
 extern long stack[];

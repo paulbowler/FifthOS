@@ -93,7 +93,7 @@ void BEGIN(int len, ...)
     Serial.println();
     Serial.print(IP, HEX);
     Serial.print(" BEGIN ");
-    pushR = P;
+    vmPushR = P;
     va_list argList;
     va_start(argList, len);
     for (; len; len--) {
@@ -112,7 +112,7 @@ void AGAIN(int len, ...)
     Serial.print(IP, HEX);
     Serial.print(" AGAIN ");
     data[P++] = BRAN;
-    data[P++] = popR << 2;
+    data[P++] = vmPopR << 2;
     va_list argList;
     va_start(argList, len);
     for (; len; len--) {
@@ -131,7 +131,7 @@ void UNTIL(int len, ...)
     Serial.print(IP, HEX);
     Serial.print(" UNTIL ");
     data[P++] = QBRAN;
-    data[P++] = popR << 2;
+    data[P++] = vmPopR << 2;
     va_list argList;
     va_start(argList, len);
     for (; len; len--) {
@@ -152,9 +152,9 @@ void WHILE(int len, ...)
     Serial.print(" WHILE ");
     data[P++] = QBRAN;
     data[P++] = 0;
-    k = popR;
-    pushR = (P - 1);
-    pushR = k;
+    k = vmPopR;
+    vmPushR = (P - 1);
+    vmPushR = k;
     va_list argList;
     va_start(argList, len);
     for (; len; len--) {
@@ -173,8 +173,8 @@ void REPEAT(int len, ...)
     Serial.print(IP, HEX);
     Serial.print(" REPEAT ");
     data[P++] = BRAN;
-    data[P++] = popR << 2;
-    data[popR] = P << 2;
+    data[P++] = vmPopR << 2;
+    data[vmPopR] = P << 2;
     va_list argList;
     va_start(argList, len);
     for (; len; len--) {
@@ -193,7 +193,7 @@ void IF(int len, ...)
     Serial.print(IP, HEX);
     Serial.print(" IF ");
     data[P++] = QBRAN;
-    pushR = P;
+    vmPushR = P;
     data[P++] = 0;
     va_list argList;
     va_start(argList, len);
@@ -214,8 +214,8 @@ void ELSE(int len, ...)
     Serial.print(" ELSE ");
     data[P++] = BRAN;
     data[P++] = 0;
-    data[popR] = P << 2;
-    pushR = P - 1;
+    data[vmPopR] = P << 2;
+    vmPushR = P - 1;
     va_list argList;
     va_start(argList, len);
     for (; len; len--) {
@@ -233,7 +233,7 @@ void THEN(int len, ...)
     Serial.println();
     Serial.print(IP, HEX);
     Serial.print(" THEN ");
-    data[popR] = P << 2;
+    data[vmPopR] = P << 2;
     va_list argList;
     va_start(argList, len);
     for (; len; len--) {
@@ -252,7 +252,7 @@ void FOR(int len, ...)
     Serial.print(IP, HEX);
     Serial.print(" FOR ");
     data[P++] = TOR;
-    pushR = P;
+    vmPushR = P;
     va_list argList;
     va_start(argList, len);
     for (; len; len--) {
@@ -271,7 +271,7 @@ void NEXT(int len, ...)
     Serial.print(IP, HEX);
     Serial.print(" NEXT ");
     data[P++] = DONXT;
-    data[P++] = popR << 2;
+    data[P++] = vmPopR << 2;
     va_list argList;
     va_start(argList, len);
     for (; len; len--) {
@@ -291,9 +291,9 @@ void AFT(int len, ...)
     Serial.print(" AFT ");
     data[P++] = BRAN;
     data[P++] = 0;
-    // int k = popR;
-    pushR = P;
-    pushR = P - 1;
+    // int k = vmPopR;
+    vmPushR = P;
+    vmPushR = P - 1;
     va_list argList;
     va_start(argList, len);
     for (; len; len--) {

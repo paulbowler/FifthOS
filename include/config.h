@@ -4,5 +4,5 @@
 // you don't mind sharing publically. Don't put passwords or secrets here, (use 
 // credentials.h for that)
 
-const char* deviceName = "eforth";
+const char* deviceName = "fifthos";
 const int monitorSpeed = 1000000;

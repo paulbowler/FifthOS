@@ -6,7 +6,7 @@
 /* PRIMITIVES                                                                 */
 /******************************************************************************/
 
-extern void (*primitives[72])(void);
+extern void (*primitives[126])(void);
 
 const int as_nop = 0;
 const int as_accept = 1;
@@ -80,3 +80,57 @@ const int as_adc = 68;
 const int as_pin = 69; //
 const int as_duty = 70; //
 const int as_freq = 71; //
+const int as_gfx_init = 72;
+const int as_screen_w = 73;
+const int as_screen_h = 74;
+const int as_cls = 75;
+const int as_pixel = 76;
+const int as_gfx_line = 77;
+const int as_rect = 78;
+const int as_fill_rect = 79;
+const int as_text = 80;
+const int as_text_w = 81;
+const int as_rotation = 82;
+const int as_touch_update = 83;
+const int as_touch_type = 84;
+const int as_touch_x = 85;
+const int as_touch_y = 86;
+const int as_touch_dx = 87;
+const int as_touch_dy = 88;
+const int as_touch_tick = 89;
+const int as_touch_target = 90;
+const int as_swipe_detect = 91;
+const int as_style_new = 92;
+const int as_style_set = 93;
+const int as_style_field_get = 94;
+const int as_style_field_set = 95;
+const int as_node_new = 96;
+const int as_node_add = 97;
+const int as_node_remove = 98;
+const int as_node_dirty = 99;
+const int as_node_draw = 100;
+const int as_node_draw_tree = 101;
+const int as_node_hit = 102;
+const int as_node_screen_xy = 103;
+const int as_node_set_bounds = 104;
+const int as_node_visible = 105;
+const int as_node_touchable = 106;
+const int as_node_field_get = 107;
+const int as_node_field_set = 108;
+const int as_event_dispatch = 109;
+const int as_event_bubble = 110;
+const int as_app_new = 111;
+const int as_app_add_screen = 112;
+const int as_app_next = 113;
+const int as_app_prev = 114;
+const int as_app_show = 115;
+const int as_app_active = 116;
+const int as_app_draw = 117;
+const int as_w_panel = 118;
+const int as_w_label = 119;
+const int as_w_button = 120;
+const int as_w_status = 121;
+const int as_w_value = 122;
+const int as_w_gauge = 123;
+const int as_w_chart = 124;
+const int as_w_alarm = 125;

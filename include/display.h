@@ -1,7 +1,8 @@
 #pragma once
 
-#include <TFT_eSPI.h>
+#include <Arduino_GFX_Library.h>
 
-extern TFT_eSPI tft;
+extern Arduino_GFX* display;
 
 void setupDisplay();
+bool isDisplayReady();
