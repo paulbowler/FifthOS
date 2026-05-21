@@ -13,8 +13,8 @@ constexpr int TOUCH_SCL = 39;
 constexpr int TOUCH_SDA = 40;
 constexpr int TOUCH_INT = 41;
 
-constexpr int MAX_STYLES = 16;
-constexpr int MAX_NODES = 64;
+constexpr int MAX_STYLES = 24;
+constexpr int MAX_NODES = 128;
 constexpr int MAX_APPS = 4;
 constexpr uint32_t TIMER_PERIOD_MS = 250;
 constexpr int SWIPE_THRESHOLD = 48;
@@ -145,16 +145,16 @@ bool touchReadPoint(int16_t* x, int16_t* y)
 
     switch (gfx_rotation()) {
         case 1:
-            *x = gfx_width() - 1 - ry;
-            *y = rx;
+            *x = ry;
+            *y = gfx_height() - 1 - rx;
             break;
         case 2:
             *x = gfx_width() - 1 - rx;
             *y = gfx_height() - 1 - ry;
             break;
         case 3:
-            *x = ry;
-            *y = gfx_height() - 1 - rx;
+            *x = gfx_width() - 1 - ry;
+            *y = rx;
             break;
         case 0:
         default:

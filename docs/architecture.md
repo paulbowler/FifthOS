@@ -125,9 +125,9 @@ Core file:
 Responsibilities:
 
 - Define Fifth-level colors, helper words, constants, and aliases
-- Build demo data and styles
-- Build the retained demo screens and app manager
-- Expose higher-level convenience words such as `SCREEN.NEW`, `STYLE.MAKE`, `GUI.STATUS`, and `TOUCH.DEBUG`
+- Build app state, styles, generic UI shell words, and showcase screens
+- Build the retained app manager and navigation shell
+- Expose higher-level convenience words such as `SCREEN.NEW`, `STYLE.MAKE`, `BODY.LABEL`, `BUILD.SHELL`, and `TOUCH.DEBUG`
 
 This file is the main bridge between the native runtime and the user-level GUI vocabulary. It is intentionally plain Fifth so the higher-level system remains editable from the language side.
 
@@ -185,17 +185,24 @@ An app owns an ordered list of retained screens. Left and right swipes switch th
 
 ### Layer 7: User Vocabulary
 
-The intended end state is a Fifth-native UI vocabulary where screens, panels, labels, gauges, and controls are built from words rather than hard-coded C++ logic. The current demo in `gui_boot.h` is the first concrete step in that direction.
+The current boot vocabulary is deliberately layered:
+
+- foundation words and constants
+- generic UI shell and layout words
+- app state and callbacks
+- top-level screen builders
+
+This keeps the distinction clear between low-level capability, reusable composition, and application-specific words.
 
 ## Boot Sequence
 
 The GUI bootstrap is evaluated in phases to make failures diagnosable on-device:
 
-1. helpers
-2. state
-3. callbacks
+1. foundation
+2. ui kit
+3. app state
 4. screens
-5. build app
+5. bootstrap
 
 If a phase fails, startup can render a boot status message to the display before the system enters normal operation.
 

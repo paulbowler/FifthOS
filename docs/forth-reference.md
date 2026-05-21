@@ -488,6 +488,30 @@ Writes one node field and marks the node dirty.
 
 Boot-loaded helper that creates a full-screen root node using the current `SCREEN.W` and `SCREEN.H`.
 
+### `NODE.DRAW!`
+
+```text
+( xt node -- )
+```
+
+Boot-loaded helper that stores a draw callback execution token into a node.
+
+### `NODE.EVENT!`
+
+```text
+( xt node -- )
+```
+
+Boot-loaded helper that stores an event callback execution token into a node.
+
+### `NODE.STYLE!`
+
+```text
+( style node -- )
+```
+
+Boot-loaded helper that stores a style handle into a node.
+
 ### `APP.NEW`
 
 ```text
@@ -619,6 +643,172 @@ The following words currently alias the native widget constructors directly:
 - `GUI.CHART`
 - `GUI.ALARM`
 
+## Generic UI Shell Words
+
+These words are boot-loaded in the current showcase app and sit above the primitive widget constructors.
+
+### `STYLE.FG`
+
+```text
+( style -- color )
+```
+
+### `STYLE.BG`
+
+```text
+( style -- color )
+```
+
+### `STYLE.BORDER`
+
+```text
+( style -- color )
+```
+
+### `DRAW.NODE`
+
+```text
+( parent x y w h style xt -- node )
+```
+
+Creates a retained node with explicit bounds, style, and draw callback.
+
+### `BODY.X`
+
+```text
+( -- x )
+```
+
+Returns the left edge of the main content area, to the right of the navigation rail.
+
+### `BODY.W`
+
+```text
+( -- w )
+```
+
+Returns the width of the main content area.
+
+### `HALF.W`
+
+```text
+( -- w )
+```
+
+Returns the width of one half-width content card.
+
+### `RIGHT.X`
+
+```text
+( -- x )
+```
+
+Returns the relative x offset for the right-hand half card in the content area.
+
+### `BODY.PANEL`
+
+```text
+( screen x y w h style -- node )
+```
+
+Creates a panel using coordinates relative to the content area rather than the full screen.
+
+### `BODY.LABEL`
+
+```text
+( screen x y w h style addr len -- node )
+```
+
+Creates a label using content-relative coordinates.
+
+### `BODY.BUTTON`
+
+```text
+( screen x y w h style addr len xt -- node )
+```
+
+Creates a button using content-relative coordinates.
+
+### `BODY.VALUE`
+
+```text
+( screen x y w h style addr len value-addr -- node )
+```
+
+Creates a value display using content-relative coordinates.
+
+### `BODY.GAUGE`
+
+```text
+( screen x y w h style value-addr min max -- node )
+```
+
+Creates a vertical gauge using content-relative coordinates.
+
+### `BODY.CHART`
+
+```text
+( screen x y w h style points-addr count min max -- node )
+```
+
+Creates a chart using content-relative coordinates.
+
+### `BODY.ALARM`
+
+```text
+( screen x y w h style addr len value-addr -- node )
+```
+
+Creates an alarm indicator using content-relative coordinates.
+
+### `SCREEN.TITLE`
+
+```text
+( screen addr len -- )
+```
+
+Adds the standard large screen title.
+
+### `SCREEN.SUBTITLE`
+
+```text
+( screen addr len -- )
+```
+
+Adds the standard small screen subtitle.
+
+### `NAV.STYLE`
+
+```text
+( index selected -- style )
+```
+
+Returns the active or idle navigation style for a navigation tile.
+
+### `NAV.BUTTON`
+
+```text
+( screen y selected index addr len xt -- )
+```
+
+Builds one navigation button in the left menu rail.
+
+### `BUILD.RAIL`
+
+```text
+( screen selected -- )
+```
+
+Builds the left-side navigation rail background and branding.
+
+### `BUILD.SHELL`
+
+```text
+( screen selected title-addr title-len sub-addr sub-len -- )
+```
+
+Builds the shared navigation rail and header shell for one screen.
+
 ## Immediate-Mode Helper Words
 
 Defined in [include/gui_boot.h](../include/gui_boot.h).
@@ -721,6 +911,46 @@ Returns inset bounds.
 
 Polls touch state and prints event diagnostics.
 
+### `NAV.TAP?`
+
+```text
+( node event x y dx -- flag )
+```
+
+Returns non-zero when the incoming callback event is a tap.
+
+### `SHOW.CLOCK`
+
+```text
+( node event x y dx -- )
+```
+
+Shows the clock screen on tap.
+
+### `SHOW.CALENDAR`
+
+```text
+( node event x y dx -- )
+```
+
+Shows the calendar screen on tap.
+
+### `SHOW.ALARMS`
+
+```text
+( node event x y dx -- )
+```
+
+Shows the alarms screen on tap.
+
+### `SHOW.WEATHER`
+
+```text
+( node event x y dx -- )
+```
+
+Shows the weather screen on tap.
+
 ### `TOGGLE.ALARM`
 
 ```text
@@ -735,7 +965,7 @@ Demo callback that toggles the alarm state.
 ( node event x y dx -- )
 ```
 
-Demo callback that updates telemetry values on timer events.
+Demo callback that advances dummy data for the showcase clock and weather screens on timer events.
 
 ### `BUILD.STYLES`
 
@@ -745,13 +975,29 @@ Demo callback that updates telemetry values on timer events.
 
 Builds the demo style set.
 
-### `BUILD.MAIN`
+### `ADD.NAV`
+
+```text
+( screen selected -- )
+```
+
+Adds the four screen navigation buttons to the left rail.
+
+### `BUILD.CLOCK`
 
 ```text
 ( -- )
 ```
 
-Builds the telemetry screen.
+Builds the clock screen.
+
+### `BUILD.CALENDAR`
+
+```text
+( -- )
+```
+
+Builds the calendar screen.
 
 ### `BUILD.ALARMS`
 
@@ -761,13 +1007,13 @@ Builds the telemetry screen.
 
 Builds the alarms screen.
 
-### `BUILD.SYSTEM`
+### `BUILD.WEATHER`
 
 ```text
 ( -- )
 ```
 
-Builds the system screen.
+Builds the weather screen.
 
 ### `BUILD.APP`
 
@@ -775,7 +1021,7 @@ Builds the system screen.
 ( -- )
 ```
 
-Creates the demo app and attaches the demo screens.
+Creates the showcase app and attaches the clock, calendar, alarms, and weather screens.
 
 ### `FIFTHOS.GUI`
 
@@ -783,7 +1029,7 @@ Creates the demo app and attaches the demo screens.
 ( -- )
 ```
 
-Builds and draws the complete demo app.
+Builds and draws the complete showcase app shell and screens.
 
 ## Example Session
 

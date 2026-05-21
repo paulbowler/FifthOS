@@ -168,15 +168,19 @@ This prints:
 - dx
 - dy
 
-### Swipe Behavior
+### Navigation Behavior
 
-The retained demo app responds to left and right swipes by switching between screens.
+The showcase app supports two navigation paths:
 
-Current demo screens:
+- a left-side menu rail with direct screen buttons
+- left and right swipes for screen-to-screen movement
 
-- telemetry
+Current showcase screens:
+
+- clock
+- calendar
 - alarms
-- system
+- weather
 
 ## Rebuilding The Demo GUI
 
@@ -188,7 +192,7 @@ The top-level builder is:
 FIFTHOS.GUI
 ```
 
-This rebuilds styles, screens, and the app manager, then draws the active app.
+This rebuilds styles, the generic UI shell, the showcase screens, and the app manager, then draws the active app.
 
 ## GUI Concepts For Users
 

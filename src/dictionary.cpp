@@ -250,9 +250,9 @@ void initDictionary()
     int STYLEN = CODE(4, as_style_new, as_next, 0, 0);
     HEADER(9, "STYLE.SET");
     int STYLES = CODE(4, as_style_set, as_next, 0, 0);
-    HEADER(11, "STYLE.FIELD@");
+    HEADER(12, "STYLE.FIELD@");
     int STYLEAT = CODE(4, as_style_field_get, as_next, 0, 0);
-    HEADER(11, "STYLE.FIELD!");
+    HEADER(12, "STYLE.FIELD!");
     int STYLEST = CODE(4, as_style_field_set, as_next, 0, 0);
     HEADER(8, "NODE.NEW");
     int NODEN = CODE(4, as_node_new, as_next, 0, 0);
