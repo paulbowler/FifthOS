@@ -20,7 +20,7 @@ Words that accept a `value-addr` or `points-addr` expect a cell address in the F
 
 ## Color Constants
 
-Boot-loaded in [include/gui_boot.h](/Users/paulbowler/Documents/Projects/FifthOS/include/gui_boot.h:1):
+Boot-loaded in [include/gui_boot.h](../include/gui_boot.h):
 
 - `BLACK`
 - `WHITE`
@@ -621,7 +621,7 @@ The following words currently alias the native widget constructors directly:
 
 ## Immediate-Mode Helper Words
 
-Defined in [include/gui_boot.h](/Users/paulbowler/Documents/Projects/FifthOS/include/gui_boot.h:1).
+Defined in [include/gui_boot.h](../include/gui_boot.h).
 
 ### `CENTER-TEXT`
 

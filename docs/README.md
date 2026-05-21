@@ -4,9 +4,9 @@ This directory is the canonical documentation set for the current FifthOS firmwa
 
 ## Documents
 
-- [architecture.md](/Users/paulbowler/Documents/Projects/FifthOS/docs/architecture.md:1): subsystem design, boot flow, runtime model, and GUI layering
-- [user-guide.md](/Users/paulbowler/Documents/Projects/FifthOS/docs/user-guide.md:1): installation, build, flashing, REPL use, GUI behavior, and troubleshooting
-- [forth-reference.md](/Users/paulbowler/Documents/Projects/FifthOS/docs/forth-reference.md:1): FifthOS-specific words, stack effects, constants, and examples
+- [architecture.md](architecture.md): subsystem design, boot flow, runtime model, and GUI layering
+- [user-guide.md](user-guide.md): installation, build, flashing, REPL use, GUI behavior, and troubleshooting
+- [forth-reference.md](forth-reference.md): FifthOS-specific words, stack effects, constants, and examples
 
 ## Scope
 

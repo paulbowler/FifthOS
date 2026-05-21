@@ -24,7 +24,7 @@ The active target in this repository is the Waveshare `ESP32-S3-AMOLED-1.91` boa
 
 ### 1. Create Wi-Fi Credentials
 
-Copy [include/credentials_template.h](/Users/paulbowler/Documents/Projects/FifthOS/include/credentials_template.h:1) to `include/credentials.h`.
+Copy [include/credentials_template.h](../include/credentials_template.h) to `include/credentials.h`.
 
 Edit:
 
@@ -228,7 +228,7 @@ The following pattern is typical:
 
 The exact words are listed in the reference guide:
 
-- [forth-reference.md](/Users/paulbowler/Documents/Projects/FifthOS/docs/forth-reference.md:1)
+- [forth-reference.md](forth-reference.md)
 
 ## Browser REPL And On-Device GUI
 
@@ -286,6 +286,6 @@ The retained runtime redraws only when the active app is dirty. If flicker retur
 
 ## Where To Look Next
 
-For system structure, read [architecture.md](/Users/paulbowler/Documents/Projects/FifthOS/docs/architecture.md:1).
+For system structure, read [architecture.md](architecture.md).
 
-For the word-level interface, read [forth-reference.md](/Users/paulbowler/Documents/Projects/FifthOS/docs/forth-reference.md:1).
+For the word-level interface, read [forth-reference.md](forth-reference.md).

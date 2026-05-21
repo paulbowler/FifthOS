@@ -19,7 +19,7 @@ At boot:
 2. Wi-Fi and mDNS come up through the network layer.
 3. The dictionary is built, registering native primitives and constants.
 4. The graphics and touch runtime is initialized.
-5. The boot-loaded Fifth GUI vocabulary from [include/gui_boot.h](/Users/paulbowler/Documents/Projects/FifthOS/include/gui_boot.h:1) is evaluated in phases.
+5. The boot-loaded Fifth GUI vocabulary from [include/gui_boot.h](../include/gui_boot.h) is evaluated in phases.
 6. The retained demo app is built and drawn.
 7. The HTTP server accepts browser REPL commands.
 
@@ -36,13 +36,13 @@ At runtime:
 
 Core files:
 
-- [include/vm.h](/Users/paulbowler/Documents/Projects/FifthOS/include/vm.h:1)
-- [src/vm.cpp](/Users/paulbowler/Documents/Projects/FifthOS/src/vm.cpp:1)
-- [include/dictionary.h](/Users/paulbowler/Documents/Projects/FifthOS/include/dictionary.h:1)
-- [src/dictionary.cpp](/Users/paulbowler/Documents/Projects/FifthOS/src/dictionary.cpp:1)
-- [src/primitives.cpp](/Users/paulbowler/Documents/Projects/FifthOS/src/primitives.cpp:1)
-- [include/forth_runtime.h](/Users/paulbowler/Documents/Projects/FifthOS/include/forth_runtime.h:1)
-- [src/forth_runtime.cpp](/Users/paulbowler/Documents/Projects/FifthOS/src/forth_runtime.cpp:1)
+- [include/vm.h](../include/vm.h)
+- [src/vm.cpp](../src/vm.cpp)
+- [include/dictionary.h](../include/dictionary.h)
+- [src/dictionary.cpp](../src/dictionary.cpp)
+- [src/primitives.cpp](../src/primitives.cpp)
+- [include/forth_runtime.h](../include/forth_runtime.h)
+- [src/forth_runtime.cpp](../src/forth_runtime.cpp)
 
 Responsibilities:
 
@@ -57,10 +57,10 @@ The VM remains the system center. The GUI layer is not a separate framework bolt
 
 Core files:
 
-- [src/network.cpp](/Users/paulbowler/Documents/Projects/FifthOS/src/network.cpp:1)
-- [src/http.cpp](/Users/paulbowler/Documents/Projects/FifthOS/src/http.cpp:1)
-- [include/index_html.h](/Users/paulbowler/Documents/Projects/FifthOS/include/index_html.h:1)
-- [src/main.cpp](/Users/paulbowler/Documents/Projects/FifthOS/src/main.cpp:1)
+- [src/network.cpp](../src/network.cpp)
+- [src/http.cpp](../src/http.cpp)
+- [include/index_html.h](../include/index_html.h)
+- [src/main.cpp](../src/main.cpp)
 
 Responsibilities:
 
@@ -75,10 +75,10 @@ The browser REPL is only a transport and terminal surface. The interpreter remai
 
 Core files:
 
-- [include/display.h](/Users/paulbowler/Documents/Projects/FifthOS/include/display.h:1)
-- [src/display.cpp](/Users/paulbowler/Documents/Projects/FifthOS/src/display.cpp:1)
-- [include/gfx_backend.h](/Users/paulbowler/Documents/Projects/FifthOS/include/gfx_backend.h:1)
-- [src/gfx_backend.cpp](/Users/paulbowler/Documents/Projects/FifthOS/src/gfx_backend.cpp:1)
+- [include/display.h](../include/display.h)
+- [src/display.cpp](../src/display.cpp)
+- [include/gfx_backend.h](../include/gfx_backend.h)
+- [src/gfx_backend.cpp](../src/gfx_backend.cpp)
 
 Responsibilities:
 
@@ -97,8 +97,8 @@ Design constraints:
 
 Core files:
 
-- [include/gui_runtime.h](/Users/paulbowler/Documents/Projects/FifthOS/include/gui_runtime.h:1)
-- [src/gui_runtime.cpp](/Users/paulbowler/Documents/Projects/FifthOS/src/gui_runtime.cpp:1)
+- [include/gui_runtime.h](../include/gui_runtime.h)
+- [src/gui_runtime.cpp](../src/gui_runtime.cpp)
 
 Responsibilities:
 
@@ -120,7 +120,7 @@ Important implementation choices:
 
 Core file:
 
-- [include/gui_boot.h](/Users/paulbowler/Documents/Projects/FifthOS/include/gui_boot.h:1)
+- [include/gui_boot.h](../include/gui_boot.h)
 
 Responsibilities:
 
@@ -201,7 +201,7 @@ If a phase fails, startup can render a boot status message to the display before
 
 ## Memory Model
 
-The GUI runtime currently uses fixed pool sizes compiled into [src/gui_runtime.cpp](/Users/paulbowler/Documents/Projects/FifthOS/src/gui_runtime.cpp:1):
+The GUI runtime currently uses fixed pool sizes compiled into [src/gui_runtime.cpp](../src/gui_runtime.cpp):
 
 - styles: 16
 - nodes: 64
