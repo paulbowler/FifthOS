@@ -561,6 +561,12 @@ void rotation(void)
     vmPop;
 }
 
+void textscale(void)
+{
+    gfx_set_text_scale(static_cast<uint8_t>(top));
+    vmPop;
+}
+
 void bitmap1(void)
 {
     long addr = top;
@@ -1123,6 +1129,22 @@ void timeWdayWord(void)
     vmPush data_time_wday();
 }
 
+void timeMonthDaysWord(void)
+{
+    long month = top;
+    long year = stack[(unsigned char)S];
+    top = data_time_month_days(static_cast<int>(year), static_cast<int>(month));
+    (unsigned char)S--;
+}
+
+void timeMonthFirstWord(void)
+{
+    long month = top;
+    long year = stack[(unsigned char)S];
+    top = data_time_month_first_wday(static_cast<int>(year), static_cast<int>(month));
+    (unsigned char)S--;
+}
+
 void taskNewWord(void)
 {
     vmPush data_task_new();
@@ -1163,7 +1185,7 @@ void taskActiveWord(void)
     top = data_task_active(static_cast<int16_t>(top)) ? -1 : 0;
 }
 
-void (*primitives[148])(void) = {
+void (*primitives[151])(void) = {
     /* case 0 */ nop,
     /* case 1 */ accep,
     /* case 2 */ qrx,
@@ -1311,5 +1333,8 @@ void (*primitives[148])(void) = {
     /* case 144 */ taskOnceWord,
     /* case 145 */ taskStartWord,
     /* case 146 */ taskStopWord,
-    /* case 147 */ taskActiveWord
+    /* case 147 */ taskActiveWord,
+    /* case 148 */ timeMonthDaysWord,
+    /* case 149 */ timeMonthFirstWord,
+    /* case 150 */ textscale
 };

@@ -6,7 +6,7 @@
 /* PRIMITIVES                                                                 */
 /******************************************************************************/
 
-extern void (*primitives[148])(void);
+extern void (*primitives[151])(void);
 
 const int as_nop = 0;
 const int as_accept = 1;
@@ -150,6 +150,9 @@ const int as_time_unix = 138;
 const int as_time_hms = 139;
 const int as_time_ymd = 140;
 const int as_time_wday = 141;
+const int as_time_month_days = 148;
+const int as_time_month_first = 149;
+const int as_text_scale = 150;
 const int as_task_new = 142;
 const int as_task_every = 143;
 const int as_task_once = 144;

@@ -99,6 +99,39 @@ bool data_time_synced()
     return unixTimeValid(time(nullptr));
 }
 
+int data_time_month_days(int year, int month)
+{
+    if (month < 1 || month > 12) {
+        return 0;
+    }
+
+    static constexpr int daysPerMonth[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    if (month != 2) {
+        return daysPerMonth[month - 1];
+    }
+
+    bool leap = ((year % 4) == 0 && (year % 100) != 0) || ((year % 400) == 0);
+    return leap ? 29 : 28;
+}
+
+int data_time_month_first_wday(int year, int month)
+{
+    if (year < 1970 || month < 1 || month > 12) {
+        return 0;
+    }
+
+    struct tm localTm = {};
+    localTm.tm_year = year - 1900;
+    localTm.tm_mon = month - 1;
+    localTm.tm_mday = 1;
+    localTm.tm_isdst = -1;
+    if (mktime(&localTm) == static_cast<time_t>(-1)) {
+        return 0;
+    }
+
+    return (localTm.tm_wday + 6) % 7;
+}
+
 long data_time_unix()
 {
     time_t now = time(nullptr);

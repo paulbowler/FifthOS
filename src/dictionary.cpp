@@ -228,6 +228,8 @@ void initDictionary()
     int TEXTW = CODE(4, as_text_w, as_next, 0, 0);
     HEADER(8, "ROTATION");
     int ROTATI = CODE(4, as_rotation, as_next, 0, 0);
+    HEADER(10, "TEXT-SCALE");
+    int TXTSCALE = CODE(4, as_text_scale, as_next, 0, 0);
     HEADER(7, "BITMAP1");
     int BITMAP = CODE(4, as_bitmap_1bit, as_next, 0, 0);
     HEADER(12, "TOUCH.UPDATE");
@@ -346,6 +348,10 @@ void initDictionary()
     int TIMEYMD = CODE(4, as_time_ymd, as_next, 0, 0);
     HEADER(9, "TIME.WDAY");
     int TIMEWDAY = CODE(4, as_time_wday, as_next, 0, 0);
+    HEADER(15, "TIME.MONTH.DAYS");
+    int TIMEMDAYS = CODE(4, as_time_month_days, as_next, 0, 0);
+    HEADER(16, "TIME.MONTH.FIRST");
+    int TIMEFIRST = CODE(4, as_time_month_first, as_next, 0, 0);
     HEADER(8, "TASK.NEW");
     int TASKNEW = CODE(4, as_task_new, as_next, 0, 0);
     HEADER(10, "TASK.EVERY");

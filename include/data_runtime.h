@@ -10,6 +10,8 @@ long data_time_unix();
 void data_time_hms(int* hour, int* minute, int* second);
 void data_time_ymd(int* year, int* month, int* day);
 int data_time_wday();
+int data_time_month_days(int year, int month);
+int data_time_month_first_wday(int year, int month);
 unsigned long data_millis_now();
 
 int16_t data_task_new();
