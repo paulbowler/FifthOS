@@ -112,6 +112,38 @@ int16_t gfx_text_width(const char* text, size_t len)
     return static_cast<int16_t>(w);
 }
 
+void gfx_bitmap_1bit(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t scale, uint16_t color, const uint32_t* rows)
+{
+    if (!isDisplayReady() || !rows || w <= 0 || h <= 0) {
+        return;
+    }
+
+    uint8_t pixelScale = scale == 0 ? 1 : scale;
+    for (int16_t row = 0; row < h; row++) {
+        uint32_t bits = rows[row];
+        for (int16_t col = 0; col < w; col++) {
+            uint32_t mask = static_cast<uint32_t>(1UL) << (w - 1 - col);
+            if ((bits & mask) == 0) {
+                continue;
+            }
+            int16_t px = x + (col * pixelScale);
+            int16_t py = y + (row * pixelScale);
+            if (pixelScale == 1) {
+                display->drawPixel(px, py, color);
+            } else {
+                // Stamp scaled pixels manually. This avoids relying on repeated
+                // tiny fillRect() writes, which appear unreliable for some
+                // colors on the RM67162 QSPI path.
+                for (uint8_t dy = 0; dy < pixelScale; dy++) {
+                    for (uint8_t dx = 0; dx < pixelScale; dx++) {
+                        display->drawPixel(px + dx, py + dy, color);
+                    }
+                }
+            }
+        }
+    }
+}
+
 void gfx_set_rotation(uint8_t rotation)
 {
     currentRotation = rotation & 0x3;

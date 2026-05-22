@@ -3,7 +3,7 @@
 #include "SPIFFS.h"
 
 #include "config.h"
-#include "credentials.h"
+#include "data_runtime.h"
 #include "dictionary.h"
 #include "forth_runtime.h"
 #include "gfx_backend.h"
@@ -29,17 +29,70 @@ void printNetworkInfo()
 {
     Serial.println();
     Serial.println();
-    Serial.print("Connected to: ");
-    Serial.println(ssid);
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-    Serial.print("Navigate to http://");
-    Serial.print(deviceName);
-    Serial.println(".local");
+    if (networkIsStationConnected()) {
+        Serial.print("Connected to: ");
+        Serial.println(networkConnectedSsid());
+        Serial.print("IP address: ");
+        Serial.println(networkStationIp());
+    } else {
+        Serial.println("Running without external WiFi");
+    }
+    if (networkIsApActive()) {
+        Serial.print("Setup AP: ");
+        Serial.println(networkApSsid());
+        Serial.print("AP password: ");
+        Serial.println(networkApPassword());
+    }
+    Serial.print("REPL URL: ");
+    Serial.println(networkReplUrl());
+    Serial.print("WiFi setup URL: ");
+    Serial.println(networkSetupUrl());
 }
 
 static void drawBootStatus(const char* title, const String& detail, uint16_t titleColor, uint16_t detailColor)
 {
+    auto drawWrappedLine = [&](const String& rawLine, int16_t& y) {
+        const int16_t x = 12;
+        const int16_t maxWidth = gfx_width() - (x * 2);
+        int start = 0;
+
+        while (start < rawLine.length() && y < gfx_height() - 24) {
+            int bestEnd = start + 1;
+            int lastSpace = -1;
+
+            for (int end = start + 1; end <= rawLine.length(); ++end) {
+                if (rawLine[end - 1] == ' ') {
+                    lastSpace = end - 1;
+                }
+
+                String chunk = rawLine.substring(start, end);
+                if (gfx_text_width(chunk.c_str(), chunk.length()) > maxWidth) {
+                    if (lastSpace >= start) {
+                        bestEnd = lastSpace;
+                    } else {
+                        bestEnd = end - 1;
+                    }
+                    break;
+                }
+
+                bestEnd = end;
+            }
+
+            if (bestEnd <= start) {
+                bestEnd = start + 1;
+            }
+
+            String chunk = rawLine.substring(start, bestEnd);
+            chunk.trim();
+            gfx_text(x, y, chunk.c_str(), chunk.length(), detailColor);
+            y += 28;
+            start = bestEnd;
+            while (start < rawLine.length() && rawLine[start] == ' ') {
+                start++;
+            }
+        }
+    };
+
     gfx_clear(COLOR_BLACK);
     gfx_set_text_scale(2);
     gfx_text(12, 24, title, strlen(title), titleColor);
@@ -57,12 +110,7 @@ static void drawBootStatus(const char* title, const String& detail, uint16_t tit
         if (end < 0) {
             end = body.length();
         }
-        String line = body.substring(start, end);
-        if (line.length() > 16) {
-            line = line.substring(0, 16);
-        }
-        gfx_text(12, y, line.c_str(), line.length(), detailColor);
-        y += 28;
+        drawWrappedLine(body.substring(start, end), y);
         start = end + 1;
     }
 }
@@ -70,6 +118,137 @@ static void drawBootStatus(const char* title, const String& detail, uint16_t tit
 static void returnFail(String msg)
 {
     server.send(500, "text/plain", msg + "\r\n");
+}
+
+static String jsonEscape(const String& value)
+{
+    String out;
+    out.reserve(value.length() + 8);
+    for (size_t i = 0; i < value.length(); ++i) {
+        char c = value[i];
+        switch (c) {
+            case '\\': out += "\\\\"; break;
+            case '\"': out += "\\\""; break;
+            case '\n': out += "\\n"; break;
+            case '\r': break;
+            case '\t': out += "\\t"; break;
+            default: out += c; break;
+        }
+    }
+    return out;
+}
+
+static void sendJson(const String& body)
+{
+    server.send(200, "application/json", body);
+}
+
+static String buildNetworkStatusJson()
+{
+    String body = "{";
+    body += "\"connected\":";
+    body += networkIsStationConnected() ? "true" : "false";
+    body += ",\"ap_active\":";
+    body += networkIsApActive() ? "true" : "false";
+    body += ",\"saved\":";
+    body += networkHasSavedCredentials() ? "true" : "false";
+    body += ",\"status\":\"" + jsonEscape(networkStatusLine()) + "\"";
+    body += ",\"connected_ssid\":\"" + jsonEscape(String(networkConnectedSsid())) + "\"";
+    body += ",\"station_ip\":\"" + jsonEscape(networkStationIp()) + "\"";
+    body += ",\"ap_ssid\":\"" + jsonEscape(String(networkApSsid())) + "\"";
+    body += ",\"ap_password\":\"" + jsonEscape(String(networkApPassword())) + "\"";
+    body += ",\"repl_url\":\"" + jsonEscape(networkReplUrl()) + "\"";
+    body += ",\"setup_url\":\"" + jsonEscape(networkSetupUrl()) + "\"";
+    body += ",\"selected_ssid\":\"\"";
+    body += ",\"scan\":[";
+    for (int i = 0; i < networkScanCount(); ++i) {
+        if (i) {
+            body += ",";
+        }
+        body += "{";
+        body += "\"ssid\":\"" + jsonEscape(String(networkScanSsid(i))) + "\"";
+        body += ",\"rssi\":";
+        body += String(networkScanRssi(i));
+        body += ",\"secure\":";
+        body += networkScanSecure(i) ? "true" : "false";
+        body += "}";
+    }
+    body += "]}";
+    return body;
+}
+
+static void handleWifiStatus()
+{
+    sendJson(buildNetworkStatusJson());
+}
+
+static void handleWifiScan()
+{
+    networkRequestScan();
+    networkTick();
+    sendJson(buildNetworkStatusJson());
+}
+
+static void handleWifiConnect()
+{
+    String ssid = server.arg("ssid");
+    String password = server.arg("password");
+    bool ok = networkConnect(ssid, password, true);
+    sendJson(String("{\"ok\":") + (ok ? "true" : "false") + ",\"message\":\"" +
+             jsonEscape(ok ? String("Connecting to ") + ssid : "Missing SSID") + "\"}");
+}
+
+static void handleWifiWps()
+{
+    bool ok = networkStartWps();
+    sendJson(String("{\"ok\":") + (ok ? "true" : "false") + ",\"message\":\"" +
+             jsonEscape(ok ? "WPS started. Press the router WPS button now." : "WPS start failed") + "\"}");
+}
+
+static void handleWifiForget()
+{
+    bool ok = networkForgetCredentials();
+    sendJson(String("{\"ok\":") + (ok ? "true" : "false") + ",\"message\":\"" +
+             jsonEscape(ok ? "Saved WiFi forgotten." : "Could not forget WiFi") + "\"}");
+}
+
+static void drawNetworkSetupScreen()
+{
+    String detail = networkStatusLine();
+    detail += "\nREPL " + networkReplUrl();
+    detail += "\nSetup " + networkSetupUrl();
+    if (networkIsApActive()) {
+        detail += "\nAP " + String(networkApSsid());
+        detail += "\nWiFi pass " + String(networkApPassword());
+    }
+    if (networkScanCount() > 0) {
+        detail += "\nNetworks:";
+        for (int i = 0; i < networkScanCount(); ++i) {
+            detail += "\n";
+            detail += String(i + 1) + ". ";
+            detail += networkScanSsid(i);
+            detail += " ";
+            detail += String(networkScanRssi(i));
+            detail += "dBm";
+        }
+    }
+    drawBootStatus("WiFi setup", detail, COLOR_ORANGE, COLOR_WHITE);
+}
+
+static void refreshDisplayMode(bool force)
+{
+    static bool showingSetup = false;
+    bool shouldShowSetup = networkShouldShowSetupScreen();
+    bool networkDirty = networkTakeDisplayDirty();
+    if (!force && showingSetup == shouldShowSetup && !networkDirty) {
+        return;
+    }
+    if (shouldShowSetup) {
+        drawNetworkSetupScreen();
+    } else if (gui_has_active_app() && (force || showingSetup != shouldShowSetup)) {
+        gui_draw_active_app();
+    }
+    showingSetup = shouldShowSetup;
 }
 
 static void handleInput()
@@ -95,7 +274,8 @@ void setup()
     top = 0;
     cData = (uint8_t*)data;
 
-    setupNetwork(monitorSpeed, ssid, pass, deviceName);
+    setupNetwork(monitorSpeed, deviceName);
+    data_runtime_init();
     initDictionary();
     gui_runtime_init();
     bool bootOk = true;
@@ -118,15 +298,23 @@ void setup()
     if (bootOk) {
         String detail = gui_has_active_app() ? "app built\nrender skipped" : "no active app";
         Serial.println(detail);
-        gui_draw_active_app();
     }
 
     setupHttp(handleInput);
+    server.on("/wifi/status", HTTP_GET, handleWifiStatus);
+    server.on("/wifi/scan", HTTP_POST, handleWifiScan);
+    server.on("/wifi/connect", HTTP_POST, handleWifiConnect);
+    server.on("/wifi/wps", HTTP_POST, handleWifiWps);
+    server.on("/wifi/forget", HTTP_POST, handleWifiForget);
+    refreshDisplayMode(true);
     printNetworkInfo();
 }
 
 void loop()
 {
+    networkTick();
+    data_runtime_tick();
     server.handleClient();
+    refreshDisplayMode(false);
     gui_runtime_tick();
 }

@@ -99,6 +99,176 @@ Declared in the dictionary but currently not implemented in the native primitive
 
 Declared in the dictionary but currently not implemented in the native primitive table.
 
+## Wi-Fi Words
+
+### `WIFI.STATUS`
+
+```text
+( -- )
+```
+
+Prints the current Wi-Fi state, including saved/station/AP flags, current SSID or AP details, and the REPL and setup URLs.
+
+### `WIFI.SCAN`
+
+```text
+( -- )
+```
+
+Triggers a scan immediately and prints the visible networks with RSSI and security state.
+
+### `WIFI.CONNECT`
+
+```text
+( ssid-addr ssid-len pass-addr pass-len -- flag )
+```
+
+Starts a station connection using the supplied SSID and password and saves that network for later boots. Returns non-zero if the request was accepted.
+
+Typical usage:
+
+```forth
+$" MySSID" COUNT $" secretpass" COUNT WIFI.CONNECT .
+```
+
+### `WIFI.WPS`
+
+```text
+( -- flag )
+```
+
+Starts WPS push-button pairing. Returns non-zero if WPS was started.
+
+### `WIFI.FORGET`
+
+```text
+( -- flag )
+```
+
+Clears the saved Wi-Fi credentials from flash. Returns non-zero on success.
+
+### `WIFI.CONNECTED?`
+
+```text
+( -- flag )
+```
+
+Returns non-zero when the board is connected to an external Wi-Fi network.
+
+### `WIFI.AP?`
+
+```text
+( -- flag )
+```
+
+Returns non-zero when the local setup AP is active.
+
+### `WIFI.SAVED?`
+
+```text
+( -- flag )
+```
+
+Returns non-zero when saved Wi-Fi credentials exist in flash.
+
+## Time And Task Words
+
+### `MILLIS`
+
+```text
+( -- ms )
+```
+
+Returns the current millisecond uptime from the ESP32 runtime.
+
+### `TIME.SYNC?`
+
+```text
+( -- flag )
+```
+
+Returns non-zero when the system clock has been synchronized to a valid wall-clock time.
+
+### `TIME.UNIX`
+
+```text
+( -- unix-seconds )
+```
+
+Returns the current Unix timestamp. Returns `0` when time has not been synchronized yet.
+
+### `TIME.HMS`
+
+```text
+( -- h m s )
+```
+
+Returns local time fields for hour, minute, and second.
+
+### `TIME.YMD`
+
+```text
+( -- y m d )
+```
+
+Returns local date fields for year, month, and day.
+
+### `TIME.WDAY`
+
+```text
+( -- wday )
+```
+
+Returns the local weekday as `0..6`, where `0` is Sunday.
+
+### `TASK.NEW`
+
+```text
+( -- task )
+```
+
+Allocates a task slot from the fixed scheduler pool. Returns `0` if no slots remain.
+
+### `TASK.EVERY`
+
+```text
+( task ms xt -- )
+```
+
+Configures `task` to run `xt` repeatedly every `ms` milliseconds.
+
+### `TASK.ONCE`
+
+```text
+( task ms xt -- )
+```
+
+Configures `task` to run `xt` once after `ms` milliseconds.
+
+### `TASK.START`
+
+```text
+( task -- )
+```
+
+Starts a configured task.
+
+### `TASK.STOP`
+
+```text
+( task -- )
+```
+
+Stops a configured task.
+
+### `TASK.ACTIVE?`
+
+```text
+( task -- flag )
+```
+
+Returns non-zero when the task is currently active.
+
 ## Graphics Backend Words
 
 ### `GFX.INIT`
@@ -188,6 +358,14 @@ Returns the rendered text width in pixels for the current text scale.
 ```
 
 Sets display rotation. Valid values are `0..3`.
+
+### `BITMAP1`
+
+```text
+( x y w h scale color addr -- )
+```
+
+Draws a 1-bit bitmap from row-mask data stored in Fifth data space.
 
 ## Touch And Event Words
 
@@ -374,7 +552,7 @@ Detaches `child` from its parent.
 ( node -- )
 ```
 
-Marks `node` and its ancestors dirty.
+Marks `node` dirty. The runtime redraw pass then walks dirty subtrees from the active screen root.
 
 ### `NODE.DRAW`
 
@@ -630,6 +808,14 @@ Creates a simple line chart.
 
 Displays alarm text using `value-addr` to determine active state.
 
+### `W.ICON16`
+
+```text
+( parent x y style bitmap-addr scale -- node )
+```
+
+Creates a retained 16x16 1-bit icon widget.
+
 ## Boot Vocabulary Widget Aliases
 
 The following words currently alias the native widget constructors directly:
@@ -642,6 +828,8 @@ The following words currently alias the native widget constructors directly:
 - `GUI.GAUGE`
 - `GUI.CHART`
 - `GUI.ALARM`
+- `GUI.ICON16`
+- `ICON.1BIT`
 
 ## Generic UI Shell Words
 
@@ -673,21 +861,45 @@ These words are boot-loaded in the current showcase app and sit above the primit
 
 Creates a retained node with explicit bounds, style, and draw callback.
 
-### `BODY.X`
+### `FACE.X`
 
 ```text
 ( -- x )
 ```
 
-Returns the left edge of the main content area, to the right of the navigation rail.
+Returns the left edge of the content area.
 
-### `BODY.W`
+### `FACE.W`
 
 ```text
 ( -- w )
 ```
 
-Returns the width of the main content area.
+Returns the content width after outer margins.
+
+### `FACE.H`
+
+```text
+( -- h )
+```
+
+Returns the full logical screen height.
+
+### `CONTENT.Y`
+
+```text
+( -- y )
+```
+
+Constant marking the top edge of the main watch-face content area below the icon row.
+
+### `CONTENT.H`
+
+```text
+( -- h )
+```
+
+Returns the content height below `CONTENT.Y`.
 
 ### `HALF.W`
 
@@ -695,7 +907,7 @@ Returns the width of the main content area.
 ( -- w )
 ```
 
-Returns the width of one half-width content card.
+Returns the width of one half-width content region.
 
 ### `RIGHT.X`
 
@@ -703,17 +915,17 @@ Returns the width of one half-width content card.
 ( -- x )
 ```
 
-Returns the relative x offset for the right-hand half card in the content area.
+Returns the relative x offset for the right-hand half content region.
 
-### `BODY.PANEL`
+### `FACE.PANEL`
 
 ```text
 ( screen x y w h style -- node )
 ```
 
-Creates a panel using coordinates relative to the content area rather than the full screen.
+Creates a retained panel using content-relative coordinates.
 
-### `BODY.LABEL`
+### `FACE.LABEL`
 
 ```text
 ( screen x y w h style addr len -- node )
@@ -721,7 +933,7 @@ Creates a panel using coordinates relative to the content area rather than the f
 
 Creates a label using content-relative coordinates.
 
-### `BODY.BUTTON`
+### `FACE.BUTTON`
 
 ```text
 ( screen x y w h style addr len xt -- node )
@@ -729,7 +941,7 @@ Creates a label using content-relative coordinates.
 
 Creates a button using content-relative coordinates.
 
-### `BODY.VALUE`
+### `FACE.VALUE`
 
 ```text
 ( screen x y w h style addr len value-addr -- node )
@@ -737,7 +949,7 @@ Creates a button using content-relative coordinates.
 
 Creates a value display using content-relative coordinates.
 
-### `BODY.GAUGE`
+### `FACE.GAUGE`
 
 ```text
 ( screen x y w h style value-addr min max -- node )
@@ -745,7 +957,7 @@ Creates a value display using content-relative coordinates.
 
 Creates a vertical gauge using content-relative coordinates.
 
-### `BODY.CHART`
+### `FACE.CHART`
 
 ```text
 ( screen x y w h style points-addr count min max -- node )
@@ -753,7 +965,7 @@ Creates a vertical gauge using content-relative coordinates.
 
 Creates a chart using content-relative coordinates.
 
-### `BODY.ALARM`
+### `FACE.ALARM`
 
 ```text
 ( screen x y w h style addr len value-addr -- node )
@@ -761,13 +973,21 @@ Creates a chart using content-relative coordinates.
 
 Creates an alarm indicator using content-relative coordinates.
 
+### `FACE.ICON`
+
+```text
+( screen x y style bitmap-addr scale -- node )
+```
+
+Creates a retained icon using content-relative coordinates.
+
 ### `SCREEN.TITLE`
 
 ```text
 ( screen addr len -- )
 ```
 
-Adds the standard large screen title.
+Currently a no-op in the watch-style demo shell.
 
 ### `SCREEN.SUBTITLE`
 
@@ -775,7 +995,7 @@ Adds the standard large screen title.
 ( screen addr len -- )
 ```
 
-Adds the standard small screen subtitle.
+Currently a no-op in the watch-style demo shell.
 
 ### `NAV.STYLE`
 
@@ -783,23 +1003,7 @@ Adds the standard small screen subtitle.
 ( index selected -- style )
 ```
 
-Returns the active or idle navigation style for a navigation tile.
-
-### `NAV.BUTTON`
-
-```text
-( screen y selected index addr len xt -- )
-```
-
-Builds one navigation button in the left menu rail.
-
-### `BUILD.RAIL`
-
-```text
-( screen selected -- )
-```
-
-Builds the left-side navigation rail background and branding.
+Returns the active or idle navigation style for a navigation item.
 
 ### `BUILD.SHELL`
 
@@ -807,7 +1011,44 @@ Builds the left-side navigation rail background and branding.
 ( screen selected title-addr title-len sub-addr sub-len -- )
 ```
 
-Builds the shared navigation rail and header shell for one screen.
+Currently a placeholder for shared shell setup in the boot vocabulary.
+
+### `FACE.RULE`
+
+```text
+( screen y -- )
+```
+
+Creates a thin full-width accent rule at relative y.
+
+### `FACE.BOX`
+
+```text
+( screen x y w h border -- node )
+```
+
+Creates a black-filled, border-outlined panel.
+
+### `FACE.INVERT`
+
+```text
+( screen x y w h addr len fg -- node )
+```
+
+Creates an inverted panel with black text on a colored fill.
+
+### Icon Asset Helpers
+
+The current boot vocabulary includes these bitmap assets and draw helpers:
+
+- `ICON.RAIN.DATA`
+- `ICON.CLOCK.DATA`
+- `ICON.CALENDAR.DATA`
+- `ICON.ALARM.DATA`
+- `ICON.RAIN`
+- `ICON.CLOCK`
+- `ICON.CALENDAR`
+- `ICON.ALARM`
 
 ## Immediate-Mode Helper Words
 
@@ -973,7 +1214,7 @@ Demo callback that advances dummy data for the showcase clock and weather screen
 ( -- )
 ```
 
-Builds the demo style set.
+Builds the current watch-face demo style set, including monochrome navigation icon styles and the blue content palette.
 
 ### `ADD.NAV`
 
@@ -981,7 +1222,47 @@ Builds the demo style set.
 ( screen selected -- )
 ```
 
-Adds the four screen navigation buttons to the left rail.
+Placeholder retained for compatibility with older boot scripts.
+
+### `ADD.NAV.CLOCK`
+
+```text
+( screen -- )
+```
+
+Builds the top icon row with the clock icon selected.
+
+### `ADD.NAV.CALENDAR`
+
+```text
+( screen -- )
+```
+
+Builds the top icon row with the calendar icon selected.
+
+### `ADD.NAV.ALARMS`
+
+```text
+( screen -- )
+```
+
+Builds the top icon row with the alarms icon selected.
+
+### `ADD.NAV.WEATHER`
+
+```text
+( screen -- )
+```
+
+Builds the top icon row with the weather icon selected.
+
+### `ADD.WEATHER.BADGE`
+
+```text
+( screen -- )
+```
+
+Adds the small weather icon badge used on the clock screen.
 
 ### `BUILD.CLOCK`
 
@@ -989,7 +1270,7 @@ Adds the four screen navigation buttons to the left rail.
 ( -- )
 ```
 
-Builds the clock screen.
+Builds the current clock watch-face screen. The live time row is split into independent retained `HH`, `MM`, and `SS` nodes plus a separate info line, so normal ticking updates only the region that changed.
 
 ### `BUILD.CALENDAR`
 
@@ -997,7 +1278,7 @@ Builds the clock screen.
 ( -- )
 ```
 
-Builds the calendar screen.
+Builds the current calendar watch-face screen.
 
 ### `BUILD.ALARMS`
 
@@ -1005,7 +1286,7 @@ Builds the calendar screen.
 ( -- )
 ```
 
-Builds the alarms screen.
+Builds the current alarms watch-face screen.
 
 ### `BUILD.WEATHER`
 
@@ -1013,7 +1294,7 @@ Builds the alarms screen.
 ( -- )
 ```
 
-Builds the weather screen.
+Builds the current weather watch-face screen.
 
 ### `BUILD.APP`
 

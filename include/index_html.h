@@ -8,6 +8,7 @@ const char index_html[] PROGMEM = R"=====(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 :root {
+    --app-height: 100dvh;
     --bg: #020604;
     --bg-soft: #08100b;
     --border: #163120;
@@ -33,6 +34,7 @@ body {
         #020604;
     color: var(--text);
     font-family: "SFMono-Regular", "Menlo", "Consolas", monospace;
+    min-height: var(--app-height);
     overflow: hidden;
 }
 
@@ -45,7 +47,7 @@ textarea {
 .terminal {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: var(--app-height);
 }
 
 .terminal-bar {
@@ -115,8 +117,7 @@ textarea {
 .screen {
     margin: 0 auto;
     max-width: 1100px;
-    min-height: 100%;
-    padding-bottom: 1rem;
+    padding-bottom: 0.25rem;
     white-space: pre-wrap;
     word-break: break-word;
 }
@@ -303,6 +304,17 @@ function scrollToBottom() {
     viewport.scrollTop = viewport.scrollHeight;
 }
 
+function settleScrollToBottom() {
+    scrollToBottom();
+    requestAnimationFrame(scrollToBottom);
+    setTimeout(scrollToBottom, 60);
+}
+
+function syncViewportHeight() {
+    const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', height + 'px');
+}
+
 function autoResizePrompt() {
     prompt.style.height = 'auto';
     prompt.style.height = Math.min(prompt.scrollHeight, 256) + 'px';
@@ -313,7 +325,7 @@ function appendLine(text, kind) {
     line.className = 'line' + (kind ? ' line-' + kind : '');
     line.textContent = text;
     screen.appendChild(line);
-    scrollToBottom();
+    settleScrollToBottom();
     return line;
 }
 
@@ -376,7 +388,7 @@ function submitCommand(command, options = {}) {
         } finally {
             pendingCount -= 1;
             setBusyState(pendingCount > 0 ? 'running...' : 'ready', pendingCount > 0);
-            scrollToBottom();
+            settleScrollToBottom();
         }
     });
 }
@@ -477,11 +489,19 @@ filepick.addEventListener('change', async (event) => {
 });
 
 window.addEventListener('load', async () => {
+    syncViewportHeight();
     autoResizePrompt();
     appendLine('connected to FifthOS', 'system');
     await submitCommand('', { echo: false, statusText: 'connecting...' });
     prompt.focus();
 });
+
+window.addEventListener('resize', syncViewportHeight);
+
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', syncViewportHeight);
+    window.visualViewport.addEventListener('scroll', syncViewportHeight);
+}
 </script>
 </body>
 </html>

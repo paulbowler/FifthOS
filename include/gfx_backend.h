@@ -12,6 +12,7 @@ void gfx_rect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
 void gfx_fill_rect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
 void gfx_text(int16_t x, int16_t y, const char* text, size_t len, uint16_t color);
 int16_t gfx_text_width(const char* text, size_t len);
+void gfx_bitmap_1bit(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t scale, uint16_t color, const uint32_t* rows);
 void gfx_set_rotation(uint8_t rotation);
 uint8_t gfx_rotation();
 void gfx_begin_frame();

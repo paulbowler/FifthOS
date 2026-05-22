@@ -23,11 +23,13 @@ This repository currently targets the Waveshare `ESP32-S3-AMOLED-1.91` board wit
 
 ## Quick Start
 
-1. Copy [include/credentials_template.h](include/credentials_template.h) to `include/credentials.h`.
-2. Edit `ssid` and `pass` in `include/credentials.h`.
-3. Build with `pio run -e esp32-s3-amoled-191`.
-4. Upload with `pio run -e esp32-s3-amoled-191 -t upload`.
-5. Open `http://fifthos.local/` in a browser once the board joins Wi-Fi.
+1. Build with `pio run -e esp32-s3-amoled-191`.
+2. Upload with `pio run -e esp32-s3-amoled-191 -t upload`.
+3. If no saved Wi-Fi exists, connect to the setup AP shown on the device.
+4. Open the displayed setup URL or REPL URL in a browser.
+5. Choose a Wi-Fi network on the setup page, or keep using the device through its own local AP.
+
+FifthOS now boots and runs without any preconfigured Wi-Fi. If no saved network is available, it starts its own setup AP and keeps the REPL available locally.
 
 ## Documentation Set
 
@@ -35,6 +37,7 @@ This repository currently targets the Waveshare `ESP32-S3-AMOLED-1.91` board wit
 - [docs/architecture.md](docs/architecture.md): detailed architecture and subsystem design
 - [docs/user-guide.md](docs/user-guide.md): installation, build, upload, REPL, GUI, and day-to-day usage
 - [docs/forth-reference.md](docs/forth-reference.md): FifthOS-specific words, constants, stack effects, and examples
+- [docs/app-tutorial.md](docs/app-tutorial.md): step-by-step tutorial for building a retained GUI app with the current high-level Fifth vocabulary
 
 ## Documentation Policy
 

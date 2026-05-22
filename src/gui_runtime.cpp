@@ -89,6 +89,7 @@ struct App {
     int16_t screens[8];
     int16_t count;
     int16_t active;
+    bool fullRedraw;
 };
 
 Style styles[MAX_STYLES] = {};
@@ -319,6 +320,7 @@ void drawNodeBuiltin(int16_t id)
             gfx_rect(sx, sy, node->w, node->h, style.border);
             break;
         case WIDGET_LABEL:
+            gfx_fill_rect(sx, sy, node->w, node->h, style.bg);
             gfx_text(sx + style.padding, sy + style.padding, forthChars(node->textAddr), node->textLen, style.fg);
             break;
         case WIDGET_STATUS_BAR:
@@ -394,6 +396,23 @@ void drawNodeBuiltin(int16_t id)
             drawCenteredText(sx + style.padding, sy + style.padding, node->w - (style.padding * 2), forthChars(node->textAddr), node->textLen, style.fg);
             break;
         }
+        case WIDGET_ICON_1BIT: {
+            long scaleValue = node->minValue <= 0 ? 1 : node->minValue;
+            if (style.bg != 0) {
+                gfx_fill_rect(sx, sy, node->w, node->h, style.bg);
+            }
+            if (style.border != 0) {
+                gfx_rect(sx, sy, node->w, node->h, style.border);
+            }
+            gfx_bitmap_1bit(sx,
+                            sy,
+                            16,
+                            16,
+                            static_cast<uint8_t>(scaleValue),
+                            style.fg,
+                            reinterpret_cast<const uint32_t*>(&data[node->textAddr >> 2]));
+            break;
+        }
         default:
             if (node->drawXt) {
                 callForthXt(node->drawXt, id, 0, 0, 0, 0, true);
@@ -421,6 +440,51 @@ void drawNodeRecursive(int16_t id)
     node->flags &= ~NODE_FLAG_DIRTY;
 }
 
+bool subtreeNeedsDraw(int16_t id)
+{
+    Node* node = nodePtr(id);
+    if (!node || !(node->flags & NODE_FLAG_VISIBLE)) {
+        return false;
+    }
+    if (node->flags & NODE_FLAG_DIRTY) {
+        return true;
+    }
+
+    int16_t child = node->firstChild;
+    while (child > 0) {
+        if (subtreeNeedsDraw(child)) {
+            return true;
+        }
+        Node* childNode = nodePtr(child);
+        child = childNode ? childNode->nextSibling : 0;
+    }
+    return false;
+}
+
+void drawDirtyRecursive(int16_t id)
+{
+    Node* node = nodePtr(id);
+    if (!node || !(node->flags & NODE_FLAG_VISIBLE)) {
+        return;
+    }
+    if (!subtreeNeedsDraw(id)) {
+        return;
+    }
+
+    if (node->flags & NODE_FLAG_DIRTY) {
+        drawNodeBuiltin(id);
+    }
+
+    int16_t child = node->firstChild;
+    while (child > 0) {
+        drawDirtyRecursive(child);
+        Node* childNode = nodePtr(child);
+        child = childNode ? childNode->nextSibling : 0;
+    }
+
+    node->flags &= ~NODE_FLAG_DIRTY;
+}
+
 bool appNeedsDraw(const App& app)
 {
     if (app.active < 0) {
@@ -428,8 +492,7 @@ bool appNeedsDraw(const App& app)
     }
 
     int16_t root = app.screens[app.active];
-    Node* rootNode = nodePtr(root);
-    return rootNode && (rootNode->flags & NODE_FLAG_DIRTY);
+    return subtreeNeedsDraw(root);
 }
 
 int16_t deepestHit(int16_t id, int16_t x, int16_t y)
@@ -506,6 +569,7 @@ void activateScreen(App& app, int16_t index)
             screen->flags &= ~NODE_FLAG_VISIBLE;
         }
     }
+    app.fullRedraw = true;
 }
 
 void dispatchTouchEvent(uint8_t type)
@@ -775,15 +839,11 @@ void gui_node_remove(int16_t child)
 
 void gui_node_dirty(int16_t node)
 {
-    int16_t cursor = node;
-    while (cursor > 0) {
-        Node* n = nodePtr(cursor);
-        if (!n) {
-            break;
-        }
-        n->flags |= NODE_FLAG_DIRTY;
-        cursor = n->parent;
+    Node* n = nodePtr(node);
+    if (!n) {
+        return;
     }
+    n->flags |= NODE_FLAG_DIRTY;
 }
 
 void gui_node_draw(int16_t node)
@@ -980,6 +1040,16 @@ int16_t gui_widget_alarm(int16_t parent, int16_t x, int16_t y, int16_t w, int16_
     return node;
 }
 
+int16_t gui_widget_icon16(int16_t parent, int16_t x, int16_t y, int16_t style, long bitmapAddr, long scale)
+{
+    int16_t iconScale = scale <= 0 ? 1 : static_cast<int16_t>(scale);
+    int16_t size = static_cast<int16_t>(16 * iconScale);
+    int16_t node = makeWidget(WIDGET_ICON_1BIT, parent, x, y, size, size, style);
+    gui_node_field_set(node, NODE_TEXT_ADDR, bitmapAddr);
+    gui_node_field_set(node, NODE_MIN, iconScale);
+    return node;
+}
+
 int16_t gui_app_new()
 {
     for (int16_t i = 1; i < MAX_APPS; i++) {
@@ -987,6 +1057,7 @@ int16_t gui_app_new()
             apps[i] = {};
             apps[i].used = true;
             apps[i].active = -1;
+            apps[i].fullRedraw = true;
             return i;
         }
     }
@@ -1059,9 +1130,14 @@ void gui_app_draw(int16_t appId)
         return;
     }
     gfx_begin_frame();
-    const Style& style = nodeStyle(*rootNode);
-    gfx_clear(style.bg);
-    drawNodeRecursive(root);
+    if (app->fullRedraw) {
+        const Style& style = nodeStyle(*rootNode);
+        gfx_clear(style.bg);
+        drawNodeRecursive(root);
+        app->fullRedraw = false;
+    } else {
+        drawDirtyRecursive(root);
+    }
     gfx_end_frame();
 }
 
@@ -1074,6 +1150,10 @@ bool gui_has_active_app()
 void gui_draw_active_app()
 {
     if (activeApp > 0) {
+        App* app = appPtr(activeApp);
+        if (app) {
+            app->fullRedraw = true;
+        }
         gui_app_draw(activeApp);
     }
 }

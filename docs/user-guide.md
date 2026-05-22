@@ -22,28 +22,37 @@ The active target in this repository is the Waveshare `ESP32-S3-AMOLED-1.91` boa
 
 ## First-Time Setup
 
-### 1. Create Wi-Fi Credentials
-
-Copy [include/credentials_template.h](../include/credentials_template.h) to `include/credentials.h`.
-
-Edit:
-
-- `ssid`
-- `pass`
-
-`include/credentials.h` is ignored by git and should remain local.
-
-### 2. Build
+### 1. Build
 
 ```bash
 pio run -e esp32-s3-amoled-191
 ```
 
-### 3. Upload
+### 2. Upload
 
 ```bash
 pio run -e esp32-s3-amoled-191 -t upload
 ```
+
+### 3. First Boot and Wi-Fi Setup
+
+FifthOS no longer depends on compile-time Wi-Fi credentials. The board always boots locally.
+
+If no saved Wi-Fi network is available, FifthOS starts a setup access point and shows:
+
+- AP name
+- Wi-Fi password
+- REPL URL
+- Wi-Fi setup URL
+
+Join that AP from a phone or computer, then open the setup URL in a browser. You can then:
+
+- scan for nearby Wi-Fi networks
+- connect with SSID and password
+- start WPS pairing
+- forget the saved Wi-Fi network
+
+Saved credentials are stored in flash and reused on later boots.
 
 ### 4. Monitor Serial Output
 
@@ -54,16 +63,23 @@ pio device monitor -b 115200
 The serial output is useful for:
 
 - Wi-Fi join confirmation
+- setup AP credentials and URLs
 - IP address reporting
 - boot diagnostics
 - GUI bootstrap failures
 
 ## Connecting To The REPL
 
-Once the board joins Wi-Fi, open:
+If the board is connected to your normal Wi-Fi, open:
 
 ```text
 http://fifthos.local/
+```
+
+If the board is running its own setup AP, open the REPL URL shown on the device, typically:
+
+```text
+http://192.168.4.1/
 ```
 
 The browser UI is an inline terminal-style REPL. Commands are entered directly into the transcript and results appear inline.
@@ -73,11 +89,11 @@ The browser UI is an inline terminal-style REPL. Commands are entered directly i
 Normal boot sequence:
 
 1. VM initializes
-2. Wi-Fi and HTTP server initialize
+2. Wi-Fi manager initializes and either reconnects or starts the setup AP
 3. Fifth dictionary is built
 4. Graphics and touch runtime initialize
 5. GUI boot phases run
-6. Demo app is built and drawn
+6. Demo app is built and drawn or the Wi-Fi setup screen is shown
 
 If the GUI bootstrap fails, the display may show a boot error with the failing phase and the unknown word or other interpreter output.
 
@@ -99,12 +115,83 @@ SCREEN.W . SCREEN.H .
 TOUCH.DEBUG
 ```
 
+```forth
+TIME.SYNC? .
+TIME.HMS . . .
+WIFI.STATUS
+```
+
 Use the browser REPL for:
 
 - trying graphics words
 - inspecting node state
 - rebuilding demo screens
 - experimenting with styles and widget composition
+- managing Wi-Fi from the live interpreter
+- checking time sync and scheduled task behavior
+
+### Wi-Fi Control From Fifth
+
+The current Wi-Fi control words are:
+
+```forth
+WIFI.STATUS
+WIFI.SCAN
+WIFI.CONNECTED? .
+WIFI.AP? .
+WIFI.SAVED? .
+```
+
+Connect to a network manually:
+
+```forth
+$" MySSID" COUNT $" secretpass" COUNT WIFI.CONNECT .
+```
+
+Start WPS pairing:
+
+```forth
+WIFI.WPS .
+```
+
+Forget the saved network:
+
+```forth
+WIFI.FORGET .
+```
+
+### Time And Task Control From Fifth
+
+The current time and scheduling words are:
+
+```forth
+MILLIS .
+TIME.SYNC? .
+TIME.UNIX .
+TIME.HMS . . .
+TIME.YMD . . .
+TIME.WDAY .
+```
+
+The current scheduler words are:
+
+```forth
+TASK.NEW
+TASK.EVERY
+TASK.ONCE
+TASK.START
+TASK.STOP
+TASK.ACTIVE?
+```
+
+Typical scheduling pattern:
+
+```forth
+TASK.NEW CONSTANT T0
+' SOME-CALLBACK CONSTANT SOME-CALLBACK.XT
+T0 1000 SOME-CALLBACK.XT TASK.EVERY
+T0 TASK.START
+```
 
 ## Display Graphics From The REPL
 
@@ -170,10 +257,9 @@ This prints:
 
 ### Navigation Behavior
 
-The showcase app supports two navigation paths:
+The current showcase app uses a top icon bar for direct navigation between screens.
 
-- a left-side menu rail with direct screen buttons
-- left and right swipes for screen-to-screen movement
+The runtime also supports touch gestures and can emit left and right swipe events, but the current watch-style demo is centered on tap navigation through the icon row.
 
 Current showcase screens:
 
@@ -194,6 +280,13 @@ FIFTHOS.GUI
 
 This rebuilds styles, the generic UI shell, the showcase screens, and the app manager, then draws the active app.
 
+The current demo is intentionally styled like a digital watch face:
+
+- one dominant datum per screen
+- compact supporting labels and metrics
+- a top icon bar for screen switching
+- minimal framing lines rather than large filled panels
+
 ## GUI Concepts For Users
 
 You will work with four main concepts:
@@ -213,7 +306,7 @@ Nodes are retained objects with bounds, flags, style, and optional callbacks or 
 
 ### Widgets
 
-Built-in widgets are convenience constructors for common node kinds such as labels and gauges.
+Built-in widgets are convenience constructors for common node kinds such as labels, gauges, alarm indicators, and 1-bit icons.
 
 ### Apps And Screens
 
@@ -234,6 +327,10 @@ The exact words are listed in the reference guide:
 
 - [forth-reference.md](forth-reference.md)
 
+For a worked end-to-end example using the current high-level vocabulary, read:
+
+- [app-tutorial.md](app-tutorial.md)
+
 ## Browser REPL And On-Device GUI
 
 The browser REPL and the local GUI are complementary:
@@ -249,17 +346,18 @@ The GUI does not replace the REPL. FifthOS is designed around keeping both activ
 
 Check:
 
-- `include/credentials.h`
-- SSID spelling
-- password
-- serial output
+- whether the board started its own setup AP instead
+- serial output for the fallback AP credentials and URLs
+- SSID spelling and password if you entered them manually
+- whether WPS is actually enabled on the router if you are using WPS
 
 ### The Browser Page Does Not Load
 
 Check:
 
-- that the board has an IP address
-- that `http://fifthos.local/` resolves on your network
+- that the board has an IP address or setup AP address
+- that `http://fifthos.local/` resolves on your network when station Wi-Fi is connected
+- whether you should be using the setup AP URL instead
 - serial output for boot failures
 
 ### The GUI Screen Is Blank
@@ -284,9 +382,12 @@ If no values change, the problem is likely below the Fifth vocabulary, in touch 
 
 The retained runtime redraws only when the active app is dirty. If flicker returns in future changes, inspect:
 
-- dirty propagation
+- whether one node update is unnecessarily dirtied as a larger subtree
 - timer handlers
-- unconditional redraw paths
+- any path that still calls a forced full redraw
+- network setup/status transitions rather than the steady-state app loop
+
+The live clock face is intentionally split into separate `HH`, `MM`, and `SS` widgets so the seconds tick does not repaint the full time row.
 
 ## Where To Look Next
 

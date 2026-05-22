@@ -1,8 +1,9 @@
 #pragma once
 
-// put non-sensitive information here which is specific to your system which 
-// you don't mind sharing publically. Don't put passwords or secrets here, (use 
-// credentials.h for that)
+// Put non-sensitive information here which is specific to your system and safe
+// to commit publicly. Wi-Fi credentials are provisioned at runtime and stored
+// in flash, not compiled into the firmware.
 
-const char* deviceName = "fifthos";
-const int monitorSpeed = 1000000;
+static constexpr const char* deviceName = "fifthos";
+static constexpr int monitorSpeed = 1000000;
+static constexpr const char* timeZone = "GMT0BST,M3.5.0/1,M10.5.0/2";

@@ -24,6 +24,7 @@ enum FifthWidgetKind : uint8_t {
     WIDGET_GAUGE_V = 6,
     WIDGET_CHART = 7,
     WIDGET_ALARM = 8,
+    WIDGET_ICON_1BIT = 9,
 };
 
 enum FifthNodeFlags : uint16_t {
@@ -81,6 +82,7 @@ int16_t gui_widget_value(int16_t parent, int16_t x, int16_t y, int16_t w, int16_
 int16_t gui_widget_gauge(int16_t parent, int16_t x, int16_t y, int16_t w, int16_t h, int16_t style, long valueAddr, long minValue, long maxValue);
 int16_t gui_widget_chart(int16_t parent, int16_t x, int16_t y, int16_t w, int16_t h, int16_t style, long pointsAddr, long count, long minValue, long maxValue);
 int16_t gui_widget_alarm(int16_t parent, int16_t x, int16_t y, int16_t w, int16_t h, int16_t style, long addr, long len, long valueAddr);
+int16_t gui_widget_icon16(int16_t parent, int16_t x, int16_t y, int16_t style, long bitmapAddr, long scale);
 
 // Apps
 int16_t gui_app_new();

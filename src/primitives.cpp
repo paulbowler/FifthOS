@@ -1,7 +1,9 @@
 #include <Arduino.h>
 #include "globals.h"
+#include "data_runtime.h"
 #include "gfx_backend.h"
 #include "gui_runtime.h"
+#include "network.h"
 #include "vm.h"
 #include "common.h"
 #include "http.h"
@@ -9,6 +11,42 @@
 /******************************************************************************/
 /* PRIMITIVES                                                                 */
 /******************************************************************************/
+
+namespace {
+
+String forthString(long addr, long len)
+{
+    String out;
+    if (len <= 0) {
+        return out;
+    }
+    out.reserve(static_cast<unsigned int>(len));
+    const char* text = reinterpret_cast<const char*>(cData + addr);
+    for (long i = 0; i < len; ++i) {
+        out += text[i];
+    }
+    return out;
+}
+
+void replPrint(const String& text)
+{
+    Serial.print(text);
+    HTTPout += text;
+}
+
+void replPrintLine(const String& text = String())
+{
+    replPrint(text);
+    replPrint("\r\n");
+}
+
+void wifiPrintUrls()
+{
+    replPrintLine(String("REPL URL: ") + networkReplUrl());
+    replPrintLine(String("WiFi setup URL: ") + networkSetupUrl());
+}
+
+}
 
 void next(void)
 {
@@ -523,6 +561,25 @@ void rotation(void)
     vmPop;
 }
 
+void bitmap1(void)
+{
+    long addr = top;
+    long color = stack[(unsigned char)S--];
+    long scale = stack[(unsigned char)S--];
+    long h = stack[(unsigned char)S--];
+    long w = stack[(unsigned char)S--];
+    long y = stack[(unsigned char)S--];
+    long x = stack[(unsigned char)S--];
+    gfx_bitmap_1bit(static_cast<int16_t>(x),
+                    static_cast<int16_t>(y),
+                    static_cast<int16_t>(w),
+                    static_cast<int16_t>(h),
+                    static_cast<uint8_t>(scale),
+                    static_cast<uint16_t>(color),
+                    reinterpret_cast<const uint32_t*>(&data[addr >> 2]));
+    vmPop;
+}
+
 void touchupdate(void)
 {
     top = gui_touch_update() LOGICAL;
@@ -939,7 +996,174 @@ void walarm(void)
                            valueAddr);
     (unsigned char)S--;
 }
-void (*primitives[126])(void) = {
+
+void wicon16(void)
+{
+    long scale = top;
+    long bitmapAddr = stack[(unsigned char)S--];
+    long style = stack[(unsigned char)S--];
+    long y = stack[(unsigned char)S--];
+    long x = stack[(unsigned char)S--];
+    long parent = stack[(unsigned char)S];
+    top = gui_widget_icon16(static_cast<int16_t>(parent),
+                            static_cast<int16_t>(x),
+                            static_cast<int16_t>(y),
+                            static_cast<int16_t>(style),
+                            bitmapAddr,
+                            scale);
+    (unsigned char)S--;
+}
+
+void wifiStatusWord(void)
+{
+    replPrintLine(String("WiFi status: ") + networkStatusLine());
+    replPrintLine(String("Saved credentials: ") + (networkHasSavedCredentials() ? "yes" : "no"));
+    replPrintLine(String("Station connected: ") + (networkIsStationConnected() ? "yes" : "no"));
+    replPrintLine(String("Setup AP active: ") + (networkIsApActive() ? "yes" : "no"));
+    if (networkIsStationConnected()) {
+        replPrintLine(String("Connected SSID: ") + networkConnectedSsid());
+        replPrintLine(String("IP address: ") + networkStationIp());
+    }
+    if (networkIsApActive()) {
+        replPrintLine(String("Setup AP: ") + networkApSsid());
+        replPrintLine(String("AP password: ") + networkApPassword());
+    }
+    wifiPrintUrls();
+}
+
+void wifiScanWord(void)
+{
+    networkRequestScan();
+    networkTick();
+    replPrintLine(String("Visible networks: ") + String(networkScanCount()));
+    for (int i = 0; i < networkScanCount(); ++i) {
+        String line = String(i + 1) + ". " + networkScanSsid(i);
+        line += " ";
+        line += String(networkScanRssi(i));
+        line += "dBm ";
+        line += networkScanSecure(i) ? "secure" : "open";
+        replPrintLine(line);
+    }
+}
+
+void wifiConnectWord(void)
+{
+    long passLen = top;
+    long passAddr = stack[(unsigned char)S--];
+    long ssidLen = stack[(unsigned char)S--];
+    long ssidAddr = stack[(unsigned char)S--];
+    bool ok = networkConnect(forthString(ssidAddr, ssidLen), forthString(passAddr, passLen), true);
+    top = ok ? -1 : 0;
+}
+
+void wifiWpsWord(void)
+{
+    top = networkStartWps() ? -1 : 0;
+}
+
+void wifiForgetWord(void)
+{
+    top = networkForgetCredentials() ? -1 : 0;
+}
+
+void wifiConnectedWord(void)
+{
+    top = networkIsStationConnected() ? -1 : 0;
+}
+
+void wifiApWord(void)
+{
+    top = networkIsApActive() ? -1 : 0;
+}
+
+void wifiSavedWord(void)
+{
+    top = networkHasSavedCredentials() ? -1 : 0;
+}
+
+void millisWord(void)
+{
+    vmPush static_cast<long>(data_millis_now());
+}
+
+void timeSyncWord(void)
+{
+    top = data_time_synced() ? -1 : 0;
+}
+
+void timeUnixWord(void)
+{
+    vmPush data_time_unix();
+}
+
+void timeHmsWord(void)
+{
+    int hour = 0;
+    int minute = 0;
+    int second = 0;
+    data_time_hms(&hour, &minute, &second);
+    vmPush hour;
+    vmPush minute;
+    vmPush second;
+}
+
+void timeYmdWord(void)
+{
+    int year = 0;
+    int month = 0;
+    int day = 0;
+    data_time_ymd(&year, &month, &day);
+    vmPush year;
+    vmPush month;
+    vmPush day;
+}
+
+void timeWdayWord(void)
+{
+    vmPush data_time_wday();
+}
+
+void taskNewWord(void)
+{
+    vmPush data_task_new();
+}
+
+void taskEveryWord(void)
+{
+    long xt = top;
+    long interval = stack[(unsigned char)S--];
+    long task = stack[(unsigned char)S];
+    data_task_every(static_cast<int16_t>(task), static_cast<uint32_t>(interval), xt);
+    (unsigned char)S--;
+}
+
+void taskOnceWord(void)
+{
+    long xt = top;
+    long interval = stack[(unsigned char)S--];
+    long task = stack[(unsigned char)S];
+    data_task_once(static_cast<int16_t>(task), static_cast<uint32_t>(interval), xt);
+    (unsigned char)S--;
+}
+
+void taskStartWord(void)
+{
+    data_task_start(static_cast<int16_t>(top));
+    vmPop;
+}
+
+void taskStopWord(void)
+{
+    data_task_stop(static_cast<int16_t>(top));
+    vmPop;
+}
+
+void taskActiveWord(void)
+{
+    top = data_task_active(static_cast<int16_t>(top)) ? -1 : 0;
+}
+
+void (*primitives[148])(void) = {
     /* case 0 */ nop,
     /* case 1 */ accep,
     /* case 2 */ qrx,
@@ -1023,47 +1247,69 @@ void (*primitives[126])(void) = {
     /* case 80 */ text,
     /* case 81 */ textw,
     /* case 82 */ rotation,
-    /* case 83 */ touchupdate,
-    /* case 84 */ touchtype,
-    /* case 85 */ touchx,
-    /* case 86 */ touchy,
-    /* case 87 */ touchdx,
-    /* case 88 */ touchdy,
-    /* case 89 */ touchtick,
-    /* case 90 */ touchtarget,
-    /* case 91 */ swipedetect,
-    /* case 92 */ stylenew,
-    /* case 93 */ styleset,
-    /* case 94 */ stylefieldget,
-    /* case 95 */ stylefieldset,
-    /* case 96 */ nodenew,
-    /* case 97 */ nodeadd,
-    /* case 98 */ noderemove,
-    /* case 99 */ nodedirty,
-    /* case 100 */ nodedraw,
-    /* case 101 */ nodedrawtree,
-    /* case 102 */ nodehit,
-    /* case 103 */ nodescreenxy,
-    /* case 104 */ nodesetbounds,
-    /* case 105 */ nodevisible,
-    /* case 106 */ nodetouchable,
-    /* case 107 */ nodefieldget,
-    /* case 108 */ nodefieldset,
-    /* case 109 */ eventdispatch,
-    /* case 110 */ eventbubble,
-    /* case 111 */ appnew,
-    /* case 112 */ appaddscreen,
-    /* case 113 */ appnext,
-    /* case 114 */ appprev,
-    /* case 115 */ appshow,
-    /* case 116 */ appactive,
-    /* case 117 */ appdraw,
-    /* case 118 */ wpanel,
-    /* case 119 */ wlabel,
-    /* case 120 */ wbutton,
-    /* case 121 */ wstatus,
-    /* case 122 */ wvalue,
-    /* case 123 */ wgauge,
-    /* case 124 */ wchart,
-    /* case 125 */ walarm
+    /* case 83 */ bitmap1,
+    /* case 84 */ touchupdate,
+    /* case 85 */ touchtype,
+    /* case 86 */ touchx,
+    /* case 87 */ touchy,
+    /* case 88 */ touchdx,
+    /* case 89 */ touchdy,
+    /* case 90 */ touchtick,
+    /* case 91 */ touchtarget,
+    /* case 92 */ swipedetect,
+    /* case 93 */ stylenew,
+    /* case 94 */ styleset,
+    /* case 95 */ stylefieldget,
+    /* case 96 */ stylefieldset,
+    /* case 97 */ nodenew,
+    /* case 98 */ nodeadd,
+    /* case 99 */ noderemove,
+    /* case 100 */ nodedirty,
+    /* case 101 */ nodedraw,
+    /* case 102 */ nodedrawtree,
+    /* case 103 */ nodehit,
+    /* case 104 */ nodescreenxy,
+    /* case 105 */ nodesetbounds,
+    /* case 106 */ nodevisible,
+    /* case 107 */ nodetouchable,
+    /* case 108 */ nodefieldget,
+    /* case 109 */ nodefieldset,
+    /* case 110 */ eventdispatch,
+    /* case 111 */ eventbubble,
+    /* case 112 */ appnew,
+    /* case 113 */ appaddscreen,
+    /* case 114 */ appnext,
+    /* case 115 */ appprev,
+    /* case 116 */ appshow,
+    /* case 117 */ appactive,
+    /* case 118 */ appdraw,
+    /* case 119 */ wpanel,
+    /* case 120 */ wlabel,
+    /* case 121 */ wbutton,
+    /* case 122 */ wstatus,
+    /* case 123 */ wvalue,
+    /* case 124 */ wgauge,
+    /* case 125 */ wchart,
+    /* case 126 */ walarm,
+    /* case 127 */ wicon16,
+    /* case 128 */ wifiStatusWord,
+    /* case 129 */ wifiScanWord,
+    /* case 130 */ wifiConnectWord,
+    /* case 131 */ wifiWpsWord,
+    /* case 132 */ wifiForgetWord,
+    /* case 133 */ wifiConnectedWord,
+    /* case 134 */ wifiApWord,
+    /* case 135 */ wifiSavedWord,
+    /* case 136 */ millisWord,
+    /* case 137 */ timeSyncWord,
+    /* case 138 */ timeUnixWord,
+    /* case 139 */ timeHmsWord,
+    /* case 140 */ timeYmdWord,
+    /* case 141 */ timeWdayWord,
+    /* case 142 */ taskNewWord,
+    /* case 143 */ taskEveryWord,
+    /* case 144 */ taskOnceWord,
+    /* case 145 */ taskStartWord,
+    /* case 146 */ taskStopWord,
+    /* case 147 */ taskActiveWord
 };
