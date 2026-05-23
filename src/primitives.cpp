@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "primitives.h"
 #include "globals.h"
 #include "data_runtime.h"
 #include "gfx_backend.h"
@@ -13,6 +14,143 @@
 /******************************************************************************/
 
 namespace {
+
+constexpr long FORTH_ADDR_IN = 0x198;
+constexpr long FORTH_ADDR_NTIB = 0x19C;
+constexpr long FORTH_ADDR_TTIB = 0x1A0;
+constexpr long FORTH_ADDR_CONTEXT = 0x1A8;
+constexpr long FORTH_ADDR_CP = 0x1AC;
+constexpr long FORTH_ADDR_LAST = 0x1B0;
+constexpr uint8_t FORTH_IMMEDIATE = 0x80;
+constexpr uint8_t MAX_LOCALS = 8;
+constexpr uint8_t MAX_LOCAL_NAME = 16;
+char localsCompileNames[MAX_LOCALS][MAX_LOCAL_NAME + 1] = {};
+
+long forthVar(long addr)
+{
+    return data[addr >> 2];
+}
+
+void forthSetVar(long addr, long value)
+{
+    data[addr >> 2] = value;
+}
+
+long forthCurrentCp()
+{
+    return forthVar(FORTH_ADDR_CP);
+}
+
+void forthSetCurrentCp(long addr)
+{
+    forthSetVar(FORTH_ADDR_CP, addr);
+}
+
+long alignCell(long addr)
+{
+    return (addr + 3) & ~0x3L;
+}
+
+uint8_t countedLen(long addr)
+{
+    return static_cast<uint8_t>(cData[addr] & 0x1F);
+}
+
+String countedToken(long addr)
+{
+    const uint8_t len = countedLen(addr);
+    String token;
+    token.reserve(len);
+    const char* text = reinterpret_cast<const char*>(cData + addr + 1);
+    for (uint8_t i = 0; i < len; ++i) {
+        token += text[i];
+    }
+    return token;
+}
+
+bool tokenEquals(long addr, const char* text)
+{
+    const uint8_t len = countedLen(addr);
+    if (strlen(text) != len) {
+        return false;
+    }
+    for (uint8_t i = 0; i < len; ++i) {
+        if (cData[addr + 1 + i] != text[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void compileCell(long value)
+{
+    long cp = forthCurrentCp();
+    data[cp >> 2] = value;
+    forthSetCurrentCp(cp + 4);
+}
+
+bool parseNextInputToken(String& out)
+{
+    long in = forthVar(FORTH_ADDR_IN);
+    const long ntib = forthVar(FORTH_ADDR_NTIB);
+    const long tib = forthVar(FORTH_ADDR_TTIB);
+    while (in < ntib && cData[tib + in] <= ' ') {
+        ++in;
+    }
+    if (in >= ntib) {
+        forthSetVar(FORTH_ADDR_IN, in);
+        return false;
+    }
+    const long start = in;
+    while (in < ntib && cData[tib + in] > ' ') {
+        ++in;
+    }
+    forthSetVar(FORTH_ADDR_IN, in);
+    out.remove(0);
+    out.reserve(static_cast<unsigned int>(in - start));
+    for (long i = start; i < in; ++i) {
+        out += static_cast<char>(cData[tib + i]);
+    }
+    return true;
+}
+
+void endLocalCompileScope()
+{
+    if (!forthLocalsCompileActive) {
+        return;
+    }
+    forthSetVar(FORTH_ADDR_LAST, forthLocalsSavedLast);
+    forthSetVar(FORTH_ADDR_CONTEXT, forthLocalsSavedContext);
+    forthLocalsCompileActive = false;
+    for (uint8_t i = 0; i < MAX_LOCALS; ++i) {
+        localsCompileNames[i][0] = '\0';
+    }
+    forthLocalsCompileCount = 0;
+}
+
+bool tokenMatchesLocal(long tokenAddr, uint8_t index)
+{
+    const uint8_t len = countedLen(tokenAddr);
+    const char* localName = localsCompileNames[index];
+    const size_t localLen = strlen(localName);
+    if (localLen != len) {
+        return false;
+    }
+    for (uint8_t i = 0; i < len; ++i) {
+        char a = cData[tokenAddr + 1 + i];
+        char b = localName[i];
+        if (a >= 'a' && a <= 'z') {
+            a = static_cast<char>(a - 32);
+        }
+        if (b >= 'a' && b <= 'z') {
+            b = static_cast<char>(b - 32);
+        }
+        if (a != b) {
+            return false;
+        }
+    }
+    return true;
+}
 
 String forthString(long addr, long len)
 {
@@ -93,6 +231,12 @@ void dolit(void)
 
 void dolist(void)
 {
+    if (forthCallDepth < 31) {
+        ++forthCallDepth;
+    }
+    forthLocalFrames[forthCallDepth].active = false;
+    forthLocalFrames[forthCallDepth].count = 0;
+    forthLocalFrames[forthCallDepth].returnSlot = R + 1;
     rack[(unsigned char)++R] = IP;
     IP = WP;
     next();
@@ -100,7 +244,15 @@ void dolist(void)
 
 void exitt(void)
 {
+    if (forthLocalFrames[forthCallDepth].active) {
+        R = forthLocalFrames[forthCallDepth].returnSlot;
+        forthLocalFrames[forthCallDepth].active = false;
+        forthLocalFrames[forthCallDepth].count = 0;
+    }
     IP = (long)rack[(unsigned char)R--];
+    if (forthCallDepth > 0) {
+        --forthCallDepth;
+    }
     next();
 }
 
@@ -1185,7 +1337,91 @@ void taskActiveWord(void)
     top = data_task_active(static_cast<int16_t>(top)) ? -1 : 0;
 }
 
-void (*primitives[151])(void) = {
+void localsEnterWord(void)
+{
+    const uint8_t localCount = static_cast<uint8_t>(data[IP >> 2]);
+    IP += 4;
+    LocalFrame& frame = forthLocalFrames[forthCallDepth];
+    frame.active = localCount > 0;
+    frame.count = localCount;
+    frame.returnSlot = static_cast<uint8_t>(R);
+    for (int i = static_cast<int>(localCount) - 1; i >= 0; --i) {
+        rack[(unsigned char)(frame.returnSlot + 1 + i)] = top;
+        vmPop;
+    }
+    R = static_cast<unsigned char>(frame.returnSlot + localCount);
+}
+
+void localFetchWord(void)
+{
+    const long index = data[IP >> 2];
+    IP += 4;
+    const LocalFrame& frame = forthLocalFrames[forthCallDepth];
+    vmPush rack[(unsigned char)(frame.returnSlot + 1 + index)];
+}
+
+void localsEndWord(void)
+{
+    endLocalCompileScope();
+}
+
+void localsOpenWord(void)
+{
+    endLocalCompileScope();
+    forthLocalsCompileActive = true;
+    forthLocalsCompileCount = 0;
+    forthLocalsSavedCp = forthVar(FORTH_ADDR_CP);
+    forthLocalsSavedLast = forthVar(FORTH_ADDR_LAST);
+    forthLocalsSavedContext = forthVar(FORTH_ADDR_CONTEXT);
+
+    String token;
+    bool outputs = false;
+    while (parseNextInputToken(token)) {
+        if (token == "}") {
+            break;
+        }
+        if (token == "--") {
+            outputs = true;
+            continue;
+        }
+        if (outputs) {
+            continue;
+        }
+        if (forthLocalsCompileCount >= MAX_LOCALS) {
+            break;
+        }
+        token.toCharArray(localsCompileNames[forthLocalsCompileCount], MAX_LOCAL_NAME + 1);
+        ++forthLocalsCompileCount;
+    }
+
+    if (forthLocalsCompileCount > 0) {
+        compileCell(forthWordLocalsEnter);
+        compileCell(forthLocalsCompileCount);
+    }
+}
+
+void compileWithLocalsWord(void)
+{
+    if (tokenEquals(top, "{")) {
+        vmPop;
+        localsOpenWord();
+        return;
+    }
+    if (forthLocalsCompileActive) {
+        for (uint8_t i = 0; i < forthLocalsCompileCount; ++i) {
+            if (tokenMatchesLocal(top, i)) {
+                compileCell(forthWordLocalFetch);
+                compileCell(i);
+                vmPop;
+                return;
+            }
+        }
+    }
+    P = forthWordScomp;
+    WP = P + 4;
+}
+
+void (*primitives[156])(void) = {
     /* case 0 */ nop,
     /* case 1 */ accep,
     /* case 2 */ qrx,
@@ -1336,5 +1572,10 @@ void (*primitives[151])(void) = {
     /* case 147 */ taskActiveWord,
     /* case 148 */ timeMonthDaysWord,
     /* case 149 */ timeMonthFirstWord,
-    /* case 150 */ textscale
+    /* case 150 */ textscale,
+    /* case 151 */ localsEnterWord,
+    /* case 152 */ localFetchWord,
+    /* case 153 */ localsEndWord,
+    /* case 154 */ localsOpenWord,
+    /* case 155 */ compileWithLocalsWord
 };

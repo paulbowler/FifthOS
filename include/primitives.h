@@ -6,7 +6,7 @@
 /* PRIMITIVES                                                                 */
 /******************************************************************************/
 
-extern void (*primitives[151])(void);
+extern void (*primitives[156])(void);
 
 const int as_nop = 0;
 const int as_accept = 1;
@@ -159,3 +159,8 @@ const int as_task_once = 144;
 const int as_task_start = 145;
 const int as_task_stop = 146;
 const int as_task_active = 147;
+const int as_locals_enter = 151;
+const int as_local_fetch = 152;
+const int as_locals_end = 153;
+const int as_locals_open = 154;
+const int as_compile_with_locals = 155;
