@@ -52,6 +52,7 @@ Responsibilities:
 - Register native words and constants
 - Execute compiled words and evaluate incoming text buffers
 - Bridge HTTP and GUI callbacks back into the interpreter
+- Support compiler-scoped read-only input locals using `{ a b -- }` syntax for colon definitions
 
 The VM remains the system center. The GUI layer is not a separate framework bolted on the side; it is another vocabulary and runtime surface available to the interpreter.
 
@@ -153,6 +154,14 @@ Responsibilities:
 
 This file is the main bridge between the native runtime and the user-level GUI vocabulary. It is intentionally plain Fifth so the higher-level system remains editable from the language side.
 
+The boot vocabulary is currently in a transitional state:
+
+- many generic helpers now use read-only locals for clarity
+- some hot draw and scheduler paths still use the older `G0..G9` scratch globals deliberately
+- the app bootstrap path also remains stack-based because it proved more stable than a broad locals conversion
+
+That split is intentional. Locals are being adopted incrementally rather than forced into the most stateful runtime paths all at once.
+
 ## GUI Layering
 
 The graphics and GUI stack is layered as follows.
@@ -215,6 +224,24 @@ The current boot vocabulary is deliberately layered:
 - top-level screen builders
 
 This keeps the distinction clear between low-level capability, reusable composition, and application-specific words.
+
+## Locals Strategy
+
+FifthOS now supports compiler-scoped read-only input locals:
+
+```forth
+: ADD2 { a b -- } a b + ;
+```
+
+This feature is intended to replace much of the old scratch-register style in GUI helper words, but not every word has been migrated yet.
+
+Current guidance:
+
+- use locals for pure helper words and screen composition words
+- keep stack order explicit in event-heavy code
+- be conservative in hot draw loops and scheduler paths
+
+The current calendar month-grid renderer is a good example of this policy. Title/state helpers use locals cleanly, while the per-cell draw loop still uses the simpler scratch-register form because it has proven to be the most brittle path during migration.
 
 ## Boot Sequence
 

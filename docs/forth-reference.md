@@ -18,6 +18,29 @@ $" Hello" COUNT
 
 Words that accept a `value-addr` or `points-addr` expect a cell address in the Fifth data space.
 
+## Locals
+
+FifthOS now supports read-only input locals in colon definitions:
+
+```forth
+: ADD2 { a b -- } a b + ;
+```
+
+This feature is compiler-scoped and currently supports:
+
+- input locals only
+- read-only access only
+- use inside ordinary colon definitions
+
+It does not yet provide writable locals such as `TO name`.
+
+The GUI boot vocabulary uses a mixed style at present:
+
+- many helper and composition words have been migrated to locals
+- some scheduler, event, bootstrap, and hot draw words still deliberately use `G0..G9`
+
+That split reflects the current safe migration boundary, not a documentation omission.
+
 ## Color Constants
 
 Boot-loaded in [include/gui_boot.h](../include/gui_boot.h):
@@ -1155,7 +1178,7 @@ Polls touch state and prints event diagnostics.
 ### `NAV.TAP?`
 
 ```text
-( node event x y dx -- flag )
+( event target tick x y -- flag )
 ```
 
 Returns non-zero when the incoming callback event is a tap.
@@ -1163,7 +1186,7 @@ Returns non-zero when the incoming callback event is a tap.
 ### `SHOW.CLOCK`
 
 ```text
-( node event x y dx -- )
+( event target tick x y -- )
 ```
 
 Shows the clock screen on tap.
@@ -1171,7 +1194,7 @@ Shows the clock screen on tap.
 ### `SHOW.CALENDAR`
 
 ```text
-( node event x y dx -- )
+( event target tick x y -- )
 ```
 
 Shows the calendar screen on tap.
@@ -1179,7 +1202,7 @@ Shows the calendar screen on tap.
 ### `SHOW.ALARMS`
 
 ```text
-( node event x y dx -- )
+( event target tick x y -- )
 ```
 
 Shows the alarms screen on tap.
@@ -1187,7 +1210,7 @@ Shows the alarms screen on tap.
 ### `SHOW.WEATHER`
 
 ```text
-( node event x y dx -- )
+( event target tick x y -- )
 ```
 
 Shows the weather screen on tap.
@@ -1195,7 +1218,7 @@ Shows the weather screen on tap.
 ### `TOGGLE.ALARM`
 
 ```text
-( node event x y dx -- )
+( event target tick x y -- )
 ```
 
 Demo callback that toggles the alarm state.
@@ -1207,6 +1230,8 @@ Demo callback that toggles the alarm state.
 ```
 
 Demo callback that advances dummy data for the showcase clock and weather screens on timer events.
+
+Note: `DEMO.TICK` remains on the older scratch-register style and is one of the words not yet migrated to locals.
 
 ### `BUILD.STYLES`
 
@@ -1280,6 +1305,8 @@ Builds the current clock watch-face screen. The live time row is split into inde
 
 Builds the current calendar watch-face screen.
 
+Important implementation note: the calendar screen currently uses locals for title/state helpers, but the per-day month-grid renderer still uses the simpler scratch-register path. This is intentional and reflects the current safe locals migration boundary.
+
 ### `BUILD.ALARMS`
 
 ```text
@@ -1303,6 +1330,8 @@ Builds the current weather watch-face screen.
 ```
 
 Creates the showcase app and attaches the clock, calendar, alarms, and weather screens.
+
+Note: the app bootstrap words remain stack-based today. A broader locals conversion of the app assembly path was attempted and then rolled back because it destabilized active-screen selection.
 
 ### `FIFTHOS.GUI`
 

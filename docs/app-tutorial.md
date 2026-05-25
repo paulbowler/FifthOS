@@ -268,6 +268,19 @@ This shows the pattern for root-level screen events:
 - coordinate testing
 - app-level screen switching
 
+For new app code, prefer explicit locals-based event signatures where practical:
+
+```forth
+: APP.NAV.TAP { event target tick x y -- }
+  event TOUCH.TAP = IF
+    y 40 < IF
+      ...
+    THEN
+  THEN ;
+```
+
+The FifthOS demo still keeps a few hot event and draw paths on the older scratch-register style where that has proven safer during incremental migration.
+
 ## Step 7: Build Screens
 
 This is where the watch-style layout matters. Each screen should have:
@@ -428,6 +441,8 @@ When building a real FifthOS app:
 
 1. Put constants, variables, and data buffers first.
 2. Put styles next.
+3. Prefer locals for pure helper and composition words.
+4. Be conservative with locals in bootstrapping, scheduler, and hot draw-loop code until those paths are explicitly proven.
 3. Put icon assets after that.
 4. Put shared shell or metric builders next.
 5. Put event handlers after that.

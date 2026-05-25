@@ -287,6 +287,13 @@ The current demo is intentionally styled like a digital watch face:
 - a top icon bar for screen switching
 - minimal framing lines rather than large filled panels
 
+The current calendar screen uses a mixed implementation on purpose:
+
+- calendar title/state helpers use the newer locals syntax
+- the per-day month-grid draw path still uses the older scratch-register form
+
+That is not accidental. It is the current safe boundary for the locals migration.
+
 ## GUI Concepts For Users
 
 You will work with four main concepts:
@@ -337,6 +344,24 @@ The browser REPL and the local GUI are complementary:
 
 - use the browser for typing, inspecting, and rapid experimentation
 - use the device screen for the target embedded user experience
+
+## Locals In FifthOS
+
+FifthOS now supports read-only input locals in colon definitions:
+
+```forth
+: ADD2 { a b -- } a b + ;
+```
+
+This is intended to reduce dependence on global scratch variables such as `G0..G9` in GUI and application words.
+
+Current limitations:
+
+- locals are currently input-only
+- writable locals such as `TO name` are not implemented yet
+- some event, scheduler, and hot draw words still intentionally use the older scratch-register style
+
+Use locals first in pure helper words and screen composition words. Migrate stateful runtime words more cautiously.
 
 The GUI does not replace the REPL. FifthOS is designed around keeping both active.
 

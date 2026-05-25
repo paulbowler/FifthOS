@@ -22,7 +22,7 @@ constexpr long FORTH_ADDR_CONTEXT = 0x1A8;
 constexpr long FORTH_ADDR_CP = 0x1AC;
 constexpr long FORTH_ADDR_LAST = 0x1B0;
 constexpr uint8_t FORTH_IMMEDIATE = 0x80;
-constexpr uint8_t MAX_LOCALS = 8;
+constexpr uint8_t MAX_LOCALS = 16;
 constexpr uint8_t MAX_LOCAL_NAME = 16;
 char localsCompileNames[MAX_LOCALS][MAX_LOCAL_NAME + 1] = {};
 
