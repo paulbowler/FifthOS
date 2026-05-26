@@ -35,6 +35,7 @@ FifthOS now boots and runs without any preconfigured Wi-Fi. If no saved network 
 
 - [docs/README.md](docs/README.md): documentation map and maintenance policy
 - [docs/architecture.md](docs/architecture.md): detailed architecture and subsystem design
+- [docs/implementation.md](docs/implementation.md): low-level implementation notes for VM/compiler/runtime designers
 - [docs/user-guide.md](docs/user-guide.md): installation, build, upload, REPL, GUI, and day-to-day usage
 - [docs/forth-reference.md](docs/forth-reference.md): FifthOS-specific words, constants, stack effects, and examples
 - [docs/app-tutorial.md](docs/app-tutorial.md): step-by-step tutorial for building a retained GUI app with the current high-level Fifth vocabulary

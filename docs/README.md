@@ -5,6 +5,7 @@ This directory is the canonical documentation set for the current FifthOS firmwa
 ## Documents
 
 - [architecture.md](architecture.md): subsystem design, boot flow, runtime model, and GUI layering
+- [implementation.md](implementation.md): low-level VM, dictionary, compiler, locals, trade-offs, and runtime implementation notes
 - [user-guide.md](user-guide.md): installation, build, flashing, REPL use, GUI behavior, and troubleshooting
 - [forth-reference.md](forth-reference.md): FifthOS-specific words, stack effects, constants, and examples
 - [app-tutorial.md](app-tutorial.md): practical tutorial for building a complete watch-style app with the retained GUI vocabulary
