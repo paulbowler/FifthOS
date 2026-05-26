@@ -20,24 +20,39 @@ Words that accept a `value-addr` or `points-addr` expect a cell address in the F
 
 ## Locals
 
-FifthOS now supports read-only input locals in colon definitions:
+FifthOS now supports compiler-scoped locals in colon definitions:
 
 ```forth
 : ADD2 { a b -- } a b + ;
 ```
 
-This feature is compiler-scoped and currently supports:
+Stable, production-used form:
 
-- input locals only
-- read-only access only
-- use inside ordinary colon definitions
+- input locals bound from the incoming stack
+- ordinary reads of those local names inside the current word only
 
-It does not yet provide writable locals such as `TO name`.
+Experimental extension:
+
+```forth
+: T1 { a b | sum -- } a b + TO sum sum . ;
+```
+
+This adds:
+
+- scratch locals declared after `|`
+- writable assignment with `TO local`
+
+Current status:
+
+- input locals are stable and used throughout the GUI vocabulary
+- scratch locals plus `TO` exist in the core, but are not yet trusted for the hottest draw-loop paths
+- one remaining calendar month-grid helper still uses explicit manual scratch variables
 
 The GUI boot vocabulary uses a mixed style at present:
 
 - many helper and composition words have been migrated to locals
-- some scheduler, event, bootstrap, and hot draw words still deliberately use `G0..G9`
+- app bootstrap words remain stack-based
+- the calendar day-cell renderer still deliberately uses explicit `CAL.DRAW.*` scratch variables
 
 That split reflects the current safe migration boundary, not a documentation omission.
 
@@ -1226,12 +1241,10 @@ Demo callback that toggles the alarm state.
 ### `DEMO.TICK`
 
 ```text
-( node event x y dx -- )
+( event target tick x y -- )
 ```
 
 Demo callback that advances dummy data for the showcase clock and weather screens on timer events.
-
-Note: `DEMO.TICK` remains on the older scratch-register style and is one of the words not yet migrated to locals.
 
 ### `BUILD.STYLES`
 
@@ -1306,6 +1319,16 @@ Builds the current clock watch-face screen. The live time row is split into inde
 Builds the current calendar watch-face screen.
 
 Important implementation note: the calendar screen currently uses locals for title/state helpers, but the per-day month-grid renderer still uses the simpler scratch-register path. This is intentional and reflects the current safe locals migration boundary.
+
+The remaining scratch variables are calendar-specific:
+
+- `CAL.DRAW.DAY#`
+- `CAL.DRAW.ADDR`
+- `CAL.DRAW.LEN`
+- `CAL.DRAW.COL`
+- `CAL.DRAW.ROW`
+- `CAL.DRAW.X`
+- `CAL.DRAW.Y`
 
 ### `BUILD.ALARMS`
 

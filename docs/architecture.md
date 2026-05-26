@@ -52,7 +52,7 @@ Responsibilities:
 - Register native words and constants
 - Execute compiled words and evaluate incoming text buffers
 - Bridge HTTP and GUI callbacks back into the interpreter
-- Support compiler-scoped read-only input locals using `{ a b -- }` syntax for colon definitions
+- Support compiler-scoped locals syntax in colon definitions, including stable input locals and an experimental writable scratch-locals extension
 
 The VM remains the system center. The GUI layer is not a separate framework bolted on the side; it is another vocabulary and runtime surface available to the interpreter.
 
@@ -156,9 +156,9 @@ This file is the main bridge between the native runtime and the user-level GUI v
 
 The boot vocabulary is currently in a transitional state:
 
-- many generic helpers now use read-only locals for clarity
-- some hot draw and scheduler paths still use the older `G0..G9` scratch globals deliberately
-- the app bootstrap path also remains stack-based because it proved more stable than a broad locals conversion
+- many generic helpers now use locals for clarity
+- the remaining hot calendar day-cell renderer uses explicitly named calendar-specific scratch variables
+- the app bootstrap path still remains stack-based because it proved more stable than a broad locals conversion
 
 That split is intentional. Locals are being adopted incrementally rather than forced into the most stateful runtime paths all at once.
 
@@ -227,13 +227,21 @@ This keeps the distinction clear between low-level capability, reusable composit
 
 ## Locals Strategy
 
-FifthOS now supports compiler-scoped read-only input locals:
+FifthOS now supports compiler-scoped locals syntax:
 
 ```forth
 : ADD2 { a b -- } a b + ;
 ```
 
-This feature is intended to replace much of the old scratch-register style in GUI helper words, but not every word has been migrated yet.
+Input locals like the example above are the stable path and are now used widely in the GUI boot vocabulary.
+
+The core also now has an experimental writable scratch-locals form:
+
+```forth
+: T1 { a b | sum -- } a b + TO sum sum . ;
+```
+
+That support exists in the compiler and runtime, but it is not yet trusted for the hottest draw-loop paths.
 
 Current guidance:
 
@@ -241,7 +249,17 @@ Current guidance:
 - keep stack order explicit in event-heavy code
 - be conservative in hot draw loops and scheduler paths
 
-The current calendar month-grid renderer is a good example of this policy. Title/state helpers use locals cleanly, while the per-cell draw loop still uses the simpler scratch-register form because it has proven to be the most brittle path during migration.
+The current calendar month-grid renderer is the main example of this policy. Title and state helpers use locals cleanly, while the per-cell draw loop still uses a tiny manual scratch frame:
+
+- `CAL.DRAW.DAY#`
+- `CAL.DRAW.ADDR`
+- `CAL.DRAW.LEN`
+- `CAL.DRAW.COL`
+- `CAL.DRAW.ROW`
+- `CAL.DRAW.X`
+- `CAL.DRAW.Y`
+
+That is intentional. Generic `G0..G9` scratch globals are gone, but the final calendar cell renderer remains on explicit scratch storage until writable locals are more mature.
 
 ## Boot Sequence
 

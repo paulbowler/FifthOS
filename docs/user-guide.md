@@ -290,7 +290,7 @@ The current demo is intentionally styled like a digital watch face:
 The current calendar screen uses a mixed implementation on purpose:
 
 - calendar title/state helpers use the newer locals syntax
-- the per-day month-grid draw path still uses the older scratch-register form
+- the per-day month-grid draw path still uses explicit calendar-specific scratch variables
 
 That is not accidental. It is the current safe boundary for the locals migration.
 
@@ -347,19 +347,35 @@ The browser REPL and the local GUI are complementary:
 
 ## Locals In FifthOS
 
-FifthOS now supports read-only input locals in colon definitions:
+FifthOS now supports compiler-scoped locals in colon definitions:
 
 ```forth
 : ADD2 { a b -- } a b + ;
 ```
 
-This is intended to reduce dependence on global scratch variables such as `G0..G9` in GUI and application words.
+This is intended to reduce dependence on manual scratch storage in GUI and application words.
+
+Stable form:
+
+- input locals bound from the incoming stack
+
+Experimental form:
+
+- internal scratch locals declared after `|`
+- writable assignment with `TO local`
+
+Example:
+
+```forth
+: T1 { a b | sum -- } a b + TO sum sum . ;
+```
 
 Current limitations:
 
-- locals are currently input-only
-- writable locals such as `TO name` are not implemented yet
-- some event, scheduler, and hot draw words still intentionally use the older scratch-register style
+- input locals are stable and used widely in the boot vocabulary
+- writable scratch locals exist, but are not yet trusted in the hottest render paths
+- the calendar day-cell renderer still intentionally uses explicit calendar scratch variables
+- app bootstrap remains stack-based because that path proved more stable than a broad locals conversion
 
 Use locals first in pure helper words and screen composition words. Migrate stateful runtime words more cautiously.
 

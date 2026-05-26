@@ -39,6 +39,12 @@ FifthOS now boots and runs without any preconfigured Wi-Fi. If no saved network 
 - [docs/forth-reference.md](docs/forth-reference.md): FifthOS-specific words, constants, stack effects, and examples
 - [docs/app-tutorial.md](docs/app-tutorial.md): step-by-step tutorial for building a retained GUI app with the current high-level Fifth vocabulary
 
+Current language/runtime notes:
+
+- compiler-scoped input locals using `{ a b -- }` are stable and used throughout the GUI vocabulary
+- scratch locals plus `TO local` exist experimentally in the core, but are not yet trusted in the hottest draw-loop paths
+- the last remaining explicit scratch-storage use in the boot vocabulary is the calendar day-cell renderer, which now uses named `CAL.DRAW.*` variables instead of generic globals
+
 ## Documentation Policy
 
 The documentation in `docs/` is intended to track the current firmware, not an aspirational design.

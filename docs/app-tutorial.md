@@ -203,11 +203,10 @@ These are app-specific helpers that sit above the generic `FACE.*` layer.
 : APP.RULE
   FACE.RULE ;
 
-: APP.METRIC
-  G7 ! G6 ! G5 ! G4 ! G3 ! G2 ! G1 ! G0 !
-  G0 @ G1 @ G2 @ G3 @ G4 @ FACE.BOX DROP
-  G0 @ G1 @ 8 +  G2 @ 10 STYLE.MUTED @ G5 @ G6 @ FACE.LABEL DROP
-  G0 @ G1 @ 18 + G2 @ 16 STYLE.TITLE @ G7 @ G3 @ FACE.LABEL DROP ;
+: APP.METRIC { screen x y w h label-addr label-len value-addr value-len -- }
+  screen x y w h FACE.BOX DROP
+  screen x y 8 +  w 10 STYLE.MUTED @ label-addr label-len FACE.LABEL DROP
+  screen x y 18 + w 16 STYLE.TITLE @ value-addr value-len FACE.LABEL DROP ;
 ```
 
 The stack effect for `APP.METRIC` is:
@@ -223,23 +222,20 @@ That is the kind of word you should create for your own app. It is application-f
 The current built-in demo uses separate words for each selected top-nav state. That pattern is simple and effective.
 
 ```forth
-: APP.NAV.HOME
-  G0 !
-  G0 @ 96  6 S.NAV.ACTIVE @ ICON.HOME.DATA   2 FACE.ICON DROP
-  G0 @ 166 6 S.NAV.IDLE   @ ICON.SENSOR.DATA 2 FACE.ICON DROP
-  G0 @ 236 6 S.NAV.IDLE   @ ICON.ALERT.DATA  2 FACE.ICON DROP ;
+: APP.NAV.HOME { screen -- }
+  screen 96  6 S.NAV.ACTIVE @ ICON.HOME.DATA   2 FACE.ICON DROP
+  screen 166 6 S.NAV.IDLE   @ ICON.SENSOR.DATA 2 FACE.ICON DROP
+  screen 236 6 S.NAV.IDLE   @ ICON.ALERT.DATA  2 FACE.ICON DROP ;
 
-: APP.NAV.SENSORS
-  G0 !
-  G0 @ 96  6 S.NAV.IDLE   @ ICON.HOME.DATA   2 FACE.ICON DROP
-  G0 @ 166 6 S.NAV.ACTIVE @ ICON.SENSOR.DATA 2 FACE.ICON DROP
-  G0 @ 236 6 S.NAV.IDLE   @ ICON.ALERT.DATA  2 FACE.ICON DROP ;
+: APP.NAV.SENSORS { screen -- }
+  screen 96  6 S.NAV.IDLE   @ ICON.HOME.DATA   2 FACE.ICON DROP
+  screen 166 6 S.NAV.ACTIVE @ ICON.SENSOR.DATA 2 FACE.ICON DROP
+  screen 236 6 S.NAV.IDLE   @ ICON.ALERT.DATA  2 FACE.ICON DROP ;
 
-: APP.NAV.ALERTS
-  G0 !
-  G0 @ 96  6 S.NAV.IDLE   @ ICON.HOME.DATA   2 FACE.ICON DROP
-  G0 @ 166 6 S.NAV.IDLE   @ ICON.SENSOR.DATA 2 FACE.ICON DROP
-  G0 @ 236 6 S.NAV.ACTIVE @ ICON.ALERT.DATA  2 FACE.ICON DROP ;
+: APP.NAV.ALERTS { screen -- }
+  screen 96  6 S.NAV.IDLE   @ ICON.HOME.DATA   2 FACE.ICON DROP
+  screen 166 6 S.NAV.IDLE   @ ICON.SENSOR.DATA 2 FACE.ICON DROP
+  screen 236 6 S.NAV.ACTIVE @ ICON.ALERT.DATA  2 FACE.ICON DROP ;
 ```
 
 ## Step 6: Define Event Helpers
@@ -247,16 +243,19 @@ The current built-in demo uses separate words for each selected top-nav state. T
 Keep event logic small. Let screens handle taps and let widgets do the rest.
 
 ```forth
-: NAV.TAP?
-  G4 ! G3 ! G2 ! G1 ! G0 !
-  G1 @ TOUCH.TAP = ;
+: NAV.TAP? { event target tick x y -- }
+  target DROP
+  tick DROP
+  x DROP
+  y DROP
+  event TOUCH.TAP = ;
 
-: APP.NAV.TAP
-  NAV.TAP? IF
-    G3 @ 40 < IF
-      G2 @ 96  < 0= G2 @ 128 < AND IF APP.DEMO @ 0 APP.SHOW THEN
-      G2 @ 166 < 0= G2 @ 198 < AND IF APP.DEMO @ 1 APP.SHOW THEN
-      G2 @ 236 < 0= G2 @ 268 < AND IF APP.DEMO @ 2 APP.SHOW THEN
+: APP.NAV.TAP { event target tick x y -- }
+  event target tick x y NAV.TAP? IF
+    y 40 < IF
+      x 96  < 0= x 128 < AND IF APP.DEMO @ 0 APP.SHOW THEN
+      x 166 < 0= x 198 < AND IF APP.DEMO @ 1 APP.SHOW THEN
+      x 236 < 0= x 268 < AND IF APP.DEMO @ 2 APP.SHOW THEN
     THEN
   THEN ;
 ' APP.NAV.TAP CONSTANT APP.NAV.TAP.XT
@@ -279,7 +278,7 @@ For new app code, prefer explicit locals-based event signatures where practical:
   THEN ;
 ```
 
-The FifthOS demo still keeps a few hot event and draw paths on the older scratch-register style where that has proven safer during incremental migration.
+The FifthOS demo still keeps one hot calendar cell-render path on explicit calendar-specific scratch variables where that has proven safer during incremental migration.
 
 ## Step 7: Build Screens
 
@@ -441,13 +440,13 @@ When building a real FifthOS app:
 
 1. Put constants, variables, and data buffers first.
 2. Put styles next.
-3. Prefer locals for pure helper and composition words.
-4. Be conservative with locals in bootstrapping, scheduler, and hot draw-loop code until those paths are explicitly proven.
 3. Put icon assets after that.
 4. Put shared shell or metric builders next.
 5. Put event handlers after that.
 6. Put screen constructors last.
 7. Put final app assembly in one small top-level word.
+8. Prefer locals for pure helper and composition words.
+9. Be conservative with locals in bootstrapping and hot draw-loop code until those paths are explicitly proven.
 
 That keeps the separation of concerns clear:
 
