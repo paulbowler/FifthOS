@@ -368,12 +368,15 @@ void initDictionary()
     int LOCENT = CODE(4, as_locals_enter, as_next, 0, 0);
     HEADER(9, "LOCAL.GET");
     int LOCGET = CODE(4, as_local_fetch, as_next, 0, 0);
+    HEADER(9, "LOCAL.SET");
+    int LOCSET = CODE(4, as_local_set, as_next, 0, 0);
     HEADER(10, "LOCALS.END");
     int LOCEND = CODE(4, as_locals_end, as_next, 0, 0);
     HEADER(IMEDD + 1, "{");
     int LOCOPEN = CODE(4, as_locals_open, as_next, 0, 0);
     forthWordLocalsEnter = LOCENT;
     forthWordLocalFetch = LOCGET;
+    forthWordLocalSet = LOCSET;
     forthWordLocalsEnd = LOCEND;
     HEADER(15, "COMPILE.LOCALS");
     int SCOMPLOC = CODE(4, as_compile_with_locals, as_next, 0, 0);

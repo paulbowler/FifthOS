@@ -126,6 +126,7 @@ void endLocalCompileScope()
         localsCompileNames[i][0] = '\0';
     }
     forthLocalsCompileCount = 0;
+    forthLocalsCompileInputCount = 0;
 }
 
 bool tokenMatchesLocal(long tokenAddr, uint8_t index)
@@ -1341,11 +1342,16 @@ void localsEnterWord(void)
 {
     const uint8_t localCount = static_cast<uint8_t>(data[IP >> 2]);
     IP += 4;
+    const uint8_t inputCount = static_cast<uint8_t>(data[IP >> 2]);
+    IP += 4;
     LocalFrame& frame = forthLocalFrames[forthCallDepth];
     frame.active = localCount > 0;
     frame.count = localCount;
     frame.returnSlot = static_cast<uint8_t>(R);
-    for (int i = static_cast<int>(localCount) - 1; i >= 0; --i) {
+    for (uint8_t i = 0; i < localCount; ++i) {
+        rack[(unsigned char)(frame.returnSlot + 1 + i)] = 0;
+    }
+    for (int i = static_cast<int>(inputCount) - 1; i >= 0; --i) {
         rack[(unsigned char)(frame.returnSlot + 1 + i)] = top;
         vmPop;
     }
@@ -1360,6 +1366,15 @@ void localFetchWord(void)
     vmPush rack[(unsigned char)(frame.returnSlot + 1 + index)];
 }
 
+void localSetWord(void)
+{
+    const long index = data[IP >> 2];
+    IP += 4;
+    LocalFrame& frame = forthLocalFrames[forthCallDepth];
+    rack[(unsigned char)(frame.returnSlot + 1 + index)] = top;
+    vmPop;
+}
+
 void localsEndWord(void)
 {
     endLocalCompileScope();
@@ -1370,33 +1385,45 @@ void localsOpenWord(void)
     endLocalCompileScope();
     forthLocalsCompileActive = true;
     forthLocalsCompileCount = 0;
+    forthLocalsCompileInputCount = 0;
     forthLocalsSavedCp = forthVar(FORTH_ADDR_CP);
     forthLocalsSavedLast = forthVar(FORTH_ADDR_LAST);
     forthLocalsSavedContext = forthVar(FORTH_ADDR_CONTEXT);
 
     String token;
-    bool outputs = false;
+    enum class LocalParseMode : uint8_t { Inputs, Scratch, Outputs };
+    LocalParseMode mode = LocalParseMode::Inputs;
     while (parseNextInputToken(token)) {
         if (token == "}") {
             break;
         }
-        if (token == "--") {
-            outputs = true;
+        if (token == "|") {
+            if (mode == LocalParseMode::Inputs) {
+                mode = LocalParseMode::Scratch;
+            }
             continue;
         }
-        if (outputs) {
+        if (token == "--") {
+            mode = LocalParseMode::Outputs;
+            continue;
+        }
+        if (mode == LocalParseMode::Outputs) {
             continue;
         }
         if (forthLocalsCompileCount >= MAX_LOCALS) {
             break;
         }
         token.toCharArray(localsCompileNames[forthLocalsCompileCount], MAX_LOCAL_NAME + 1);
+        if (mode == LocalParseMode::Inputs) {
+            ++forthLocalsCompileInputCount;
+        }
         ++forthLocalsCompileCount;
     }
 
     if (forthLocalsCompileCount > 0) {
         compileCell(forthWordLocalsEnter);
         compileCell(forthLocalsCompileCount);
+        compileCell(forthLocalsCompileInputCount);
     }
 }
 
@@ -1408,6 +1435,20 @@ void compileWithLocalsWord(void)
         return;
     }
     if (forthLocalsCompileActive) {
+        if (tokenEquals(top, "TO")) {
+            vmPop;
+            String token;
+            if (parseNextInputToken(token)) {
+                for (uint8_t i = 0; i < forthLocalsCompileCount; ++i) {
+                    if (token.equalsIgnoreCase(localsCompileNames[i])) {
+                        compileCell(forthWordLocalSet);
+                        compileCell(i);
+                        return;
+                    }
+                }
+            }
+            return;
+        }
         for (uint8_t i = 0; i < forthLocalsCompileCount; ++i) {
             if (tokenMatchesLocal(top, i)) {
                 compileCell(forthWordLocalFetch);
@@ -1421,7 +1462,7 @@ void compileWithLocalsWord(void)
     WP = P + 4;
 }
 
-void (*primitives[156])(void) = {
+void (*primitives[157])(void) = {
     /* case 0 */ nop,
     /* case 1 */ accep,
     /* case 2 */ qrx,
@@ -1577,5 +1618,6 @@ void (*primitives[156])(void) = {
     /* case 152 */ localFetchWord,
     /* case 153 */ localsEndWord,
     /* case 154 */ localsOpenWord,
-    /* case 155 */ compileWithLocalsWord
+    /* case 155 */ compileWithLocalsWord,
+    /* case 156 */ localSetWord
 };

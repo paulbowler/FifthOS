@@ -17,11 +17,13 @@ extern LocalFrame forthLocalFrames[32];
 
 extern bool forthLocalsCompileActive;
 extern uint8_t forthLocalsCompileCount;
+extern uint8_t forthLocalsCompileInputCount;
 extern long forthLocalsSavedCp;
 extern long forthLocalsSavedLast;
 extern long forthLocalsSavedContext;
 
 extern long forthWordLocalsEnter;
 extern long forthWordLocalFetch;
+extern long forthWordLocalSet;
 extern long forthWordLocalsEnd;
 extern long forthWordScomp;
